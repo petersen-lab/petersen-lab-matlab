@@ -1,0 +1,3 @@
+[submodule "KilosortWrapper"]
+	path = KilosortWrapper
+	url = git@github.com:dervinism/KilosortWrapper
