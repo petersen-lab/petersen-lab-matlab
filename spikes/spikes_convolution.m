@@ -2,7 +2,7 @@ function [spikes_presentation,time_bins] = spikes_convolution(spikes, stepsize, 
 % Gaussian convolution of the spikes raster into continuous rates 
 % Inputs
 %   spikes              % Spikes struct with numcells and times fields
-%   stepsize            % step size of continues traces
+%   stepsize            % step size of continuous traces
 %   convolution_points  % points of gaussian convolution (gausswin)
 %
 % Output

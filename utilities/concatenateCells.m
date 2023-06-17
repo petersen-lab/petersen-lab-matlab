@@ -13,6 +13,9 @@ function concatenatedMatrix = concatenateCells(cellArray, dimension)
 % Returns:
 %   concatenatedMatrix (numeric): a shape-(M, N) numeric matrix containing
 %     concatentated elements of the input cell array.
+%
+% Authors:
+%   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
   cellArray cell
