@@ -19,7 +19,7 @@ function concatenatedMatrix = concatenateCells(cellArray, dimension)
 
 arguments
   cellArray cell
-  dimension (1,1) {mustBeNumeric} = 1
+  dimension (1,1) {mustBeNumeric,mustBePositive} = 1
 end
 
 % Concatenate

@@ -28,6 +28,7 @@ spikes_presentation = zeros(spikes.numcells,numel(time_bins));
 
 for i = 1:spikes.numcells
     idx = round(spikes.times{i}/stepsize); % Assign bin indices to spikes
+    idx(idx == 0) = 1;
     [spkCounts,idx] = groupcounts(idx); % Count spikes within bin indices
     spikes_presentation(i,idx) = spkCounts; % Mark spike presentations
     
