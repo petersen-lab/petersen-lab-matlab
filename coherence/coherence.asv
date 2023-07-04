@@ -15,6 +15,10 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal
 %   stepsize (numeric, optional, keyword): a shape-(1, 1) nunmeric scalar
 %     corresponding to the new sampling interval in seconds after
 %     resampling prior to coherence analysis (default = 0.002).
+%   startTime (numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     corresponding to the start time bin used to generate spike count
+%     vectors (or continuous resampled signal) for coherence analysis
+%     (default = 0).
 %   range (numeric, optional, keyword): a shape-(1, 2) numeric array with
 %     the frequency range for estimating coherence and phase values.
 %     Default values are [0 0.5/options.stepsize].
@@ -144,6 +148,7 @@ arguments
   timesSignal (1,:) {mustBeNumericOrListedType(timesSignal,'cell')}
   timesReference {mustBeVector,mustBeNonnegative}
   options.stepsize (1,1) {mustBeNumeric,mustBePositive} = 0.002
+  options.startTime (1,1) {mustBeNumeric} = 0
   options.range (1,2) {mustBeNumeric} = [0 0]
   options.typespk1 {mustBeMember(options.typespk1,{'pb','c'})} = 'pb'
   options.typespk2 {mustBeMember(options.typespk2,{'pb','c'})} = 'pb'
@@ -170,8 +175,8 @@ if options.range(2) == 0
 end
 
 % Resample signals (unit rates) and the reference (population rate)
-downsampledSignal = resampleSpikesArray(timesSignal, stepsize=options.stepsize);
-downsampledReference = resampleSpikes(timesReference, stepsize=options.stepsize);
+downsampledSignal = resampleSpikesArray(timesSignal, stepsize=options.stepsize, startTime=options.startTime);
+downsampledReference = resampleSpikes(timesReference, stepsize=options.stepsize, startTime=options.startTime);
 
 % Calculate phase and coherence for all signals
 nUnits = numel(timesSignal);
@@ -301,18 +306,18 @@ if options.rateAdjust && (strcmpi(options.typespk1,'pb') || strcmpi(options.type
     half2Coherence.kappaReference = [];
   end
   if options.parallelise
-    fullCoherence_rateAdjustedCoherence = zeros(nUnits,numel(fullPSDReference)); % These are temporary containers to enable running the parfor loop
-    fullCoherence_kappaSignal = zeros(nUnits,numel(fullPSDReference));
-    fullCoherence_kappaReference = zeros(nUnits,numel(fullPSDReference));
-    fullCoherence_rateAdjustedCoherenceConf = zeros(nUnits,numel(fullPSDReference));
-    half1Coherence_rateAdjustedCoherence = zeros(nUnits,numel(half1PSDReference));
-    half1Coherence_kappaSignal = zeros(nUnits,numel(half1PSDReference));
-    half1Coherence_kappaReference = zeros(nUnits,numel(half1PSDReference));
-    half1Coherence_rateAdjustedCoherenceConf = zeros(nUnits,numel(half1PSDReference));
-    half2Coherence_rateAdjustedCoherence = zeros(nUnits,numel(half2PSDReference));
-    half2Coherence_kappaSignal = zeros(nUnits,numel(half2PSDReference));
-    half2Coherence_kappaReference = zeros(nUnits,numel(half2PSDReference));
-    half2Coherence_rateAdjustedCoherenceConf = zeros(nUnits,numel(half2PSDReference));
+    fullCoherence_rateAdjustedCoherence = zeros(nUnits,numel(fullPSDReference.psd)); % These are temporary containers to enable running the parfor loop
+    fullCoherence_kappaSignal = zeros(nUnits,numel(fullPSDReference.psd));
+    fullCoherence_kappaReference = zeros(nUnits,numel(fullPSDReference.psd));
+    fullCoherence_rateAdjustedCoherenceConf = zeros(nUnits,numel(fullPSDReference.psd));
+    half1Coherence_rateAdjustedCoherence = zeros(nUnits,numel(half1PSDReference.psd));
+    half1Coherence_kappaSignal = zeros(nUnits,numel(half1PSDReference.psd));
+    half1Coherence_kappaReference = zeros(nUnits,numel(half1PSDReference.psd));
+    half1Coherence_rateAdjustedCoherenceConf = zeros(nUnits,numel(half1PSDReference.psd));
+    half2Coherence_rateAdjustedCoherence = zeros(nUnits,numel(half2PSDReference.psd));
+    half2Coherence_kappaSignal = zeros(nUnits,numel(half2PSDReference.psd));
+    half2Coherence_kappaReference = zeros(nUnits,numel(half2PSDReference.psd));
+    half2Coherence_rateAdjustedCoherenceConf = zeros(nUnits,numel(half2PSDReference.psd));
     parfor unit = 1:nUnits
       if strcmpi(options.typespk1,'pb') % Mean firing rates
         [mfrFullSignal(unit), mfrHalvesSignal(unit,:)] = rateCalc(downsampledSignal(unit,:), ...
@@ -616,7 +621,8 @@ if options.halfCoherence
   else % 2nd halves of any one of the two signals are empty
     if sum(signal_1sthalf)
       if ~exist('freq_1sthalf','var') % The case when one of the first halves of two signals was empty
-        freq_1sthalf = NaN; coh_1sthalf = NaN; phi_1sthalf = NaN;
+        freq_1sthalf = freqDependentWindowCoherence(reference_1sthalf', [], options.samplingInterval, [], options);
+        coh_1sthalf = NaN(size(freq_1sthalf)); phi_1sthalf = NaN(size(freq_1sthalf));
       end
       freq_2ndhalf = NaN(size(freq_1sthalf)); coh_2ndhalf = NaN(size(coh_1sthalf)); phi_2ndhalf = NaN(size(phi_1sthalf));
     else % Both signals are totally empty
@@ -652,7 +658,8 @@ if options.fullCoherence
     phi(isnan(phi_confU)) = NaN;
     phi(isnan(phi_confL)) = NaN;
   else
-    freq = NaN; coh = NaN; phi = NaN; coh_conf = NaN; phi_confU = NaN; phi_confL = NaN;
+    freq = freqDependentWindowCoherence(reference', [], options.samplingInterval, [], options);
+    coh = NaN(size(freq)); phi = NaN(size(freq)); coh_conf = NaN(size(freq)); phi_confU = NaN(size(freq)); phi_confL = NaN(size(freq));
   end
 else
   freq = []; coh = []; phi = []; coh_conf = []; phi_confU = []; phi_confL = [];
@@ -982,9 +989,9 @@ function kappa = kappaCalc(mfr1, mfr2, psd1, options)
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
-  mfr1 (1,1) {mustBeNumeric}
-  mfr2 (1,1) {mustBeNumeric}
-  psd1 {mustBeVector}
+  mfr1 (1,1) {mustBeNumeric,mustBeNonnegative}
+  mfr2 (1,1) {mustBeNumeric,mustBeNonnegative}
+  psd1 {mustBeVector,mustBeNonnegative}
   options.beta (1,1) {mustBeNumeric} = 0
   options.samplingInterval (1,1) {mustBeNumeric,mustBePositive} = 0.002
 end

@@ -15,6 +15,10 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal
 %   stepsize (numeric, optional, keyword): a shape-(1, 1) nunmeric scalar
 %     corresponding to the new sampling interval in seconds after
 %     resampling prior to coherence analysis (default = 0.002).
+%   startTime (numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     corresponding to the start time bin used to generate spike count
+%     vectors (or continuous resampled signal) for coherence analysis
+%     (default = 0).
 %   range (numeric, optional, keyword): a shape-(1, 2) numeric array with
 %     the frequency range for estimating coherence and phase values.
 %     Default values are [0 0.5/options.stepsize].
@@ -144,6 +148,7 @@ arguments
   timesSignal (1,:) {mustBeNumericOrListedType(timesSignal,'cell')}
   timesReference {mustBeVector,mustBeNonnegative}
   options.stepsize (1,1) {mustBeNumeric,mustBePositive} = 0.002
+  options.startTime (1,1) {mustBeNumeric} = 0
   options.range (1,2) {mustBeNumeric} = [0 0]
   options.typespk1 {mustBeMember(options.typespk1,{'pb','c'})} = 'pb'
   options.typespk2 {mustBeMember(options.typespk2,{'pb','c'})} = 'pb'
@@ -170,8 +175,8 @@ if options.range(2) == 0
 end
 
 % Resample signals (unit rates) and the reference (population rate)
-downsampledSignal = resampleSpikesArray(timesSignal, stepsize=options.stepsize);
-downsampledReference = resampleSpikes(timesReference, stepsize=options.stepsize);
+downsampledSignal = resampleSpikesArray(timesSignal, stepsize=options.stepsize, startTime=options.startTime);
+downsampledReference = resampleSpikes(timesReference, stepsize=options.stepsize, startTime=options.startTime);
 
 % Calculate phase and coherence for all signals
 nUnits = numel(timesSignal);
@@ -616,12 +621,14 @@ if options.halfCoherence
   else % 2nd halves of any one of the two signals are empty
     if sum(signal_1sthalf)
       if ~exist('freq_1sthalf','var') % The case when one of the first halves of two signals was empty
-        freq_1sthalf = NaN; coh_1sthalf = NaN; phi_1sthalf = NaN;
+        freq_1sthalf = freqDependentWindowCoherence(reference_1sthalf', [], options.samplingInterval, [], options);
+        coh_1sthalf = NaN(size(freq_1sthalf)); phi_1sthalf = NaN(size(freq_1sthalf));
       end
-      freq_2ndhalf = NaN(size(freq_1sthalf)); coh_2ndhalf = NaN(size(coh_1sthalf)); phi_2ndhalf = NaN(size(phi_1sthalf));
+      freq_2ndhalf = freq_1sthalf; coh_2ndhalf = NaN(size(coh_1sthalf)); phi_2ndhalf = NaN(size(phi_1sthalf));
     else % Both signals are totally empty
-      freq_1sthalf = NaN; coh_1sthalf = NaN; phi_1sthalf = NaN;
-      freq_2ndhalf = NaN; coh_2ndhalf = NaN; phi_2ndhalf = NaN;
+      freq_1sthalf = freqDependentWindowCoherence(reference_1sthalf', [], options.samplingInterval, [], options);
+      coh_1sthalf = NaN(size(freq_1sthalf)); phi_1sthalf = NaN(size(freq_1sthalf));
+      freq_2ndhalf = freq_1sthalf; coh_2ndhalf = NaN(size(coh_1sthalf)); phi_2ndhalf = NaN(size(phi_1sthalf));
     end
   end
 
@@ -652,7 +659,8 @@ if options.fullCoherence
     phi(isnan(phi_confU)) = NaN;
     phi(isnan(phi_confL)) = NaN;
   else
-    freq = NaN; coh = NaN; phi = NaN; coh_conf = NaN; phi_confU = NaN; phi_confL = NaN;
+    freq = freqDependentWindowCoherence(reference', [], options.samplingInterval, [], options);
+    coh = NaN(size(freq)); phi = NaN(size(freq)); coh_conf = NaN(size(freq)); phi_confU = NaN(size(freq)); phi_confL = NaN(size(freq));
   end
 else
   freq = []; coh = []; phi = []; coh_conf = []; phi_confU = []; phi_confL = [];
@@ -930,7 +938,7 @@ arguments
   mfr2 (1,1) {mustBeNumeric,mustBeNonnegative}
   psd1 {mustBeVector,mustBeNonnegative}
   psd2 {mustBeVector,mustBeNonnegative}
-  coh {mustBeVector,mustBeNonnegative}
+  coh {mustBeVector}
   options.samplingInterval (1,1) {mustBeNumeric,mustBePositive} = 0.002
 end
 
