@@ -31,7 +31,7 @@ time_bins = max([1 floor(startTime/stepsize)])*stepsize:stepsize:ceil(max(spikes
 spikes_presentation = zeros(spikes.numcells,numel(time_bins));
 
 for i = 1:spikes.numcells
-    idx = round(spikes.times{i}/stepsize) - spikeTimeBins(1)/stepsize + 1; % Assign bin indices to spikes
+    idx = round(spikes.times{i}/stepsize) - time_bins(1)/stepsize + 1; % Assign bin indices to spikes
     idx(idx == 0) = 1;
     [spkCounts,idx] = groupcounts(idx); % Count spikes within bin indices
     spikes_presentation(i,idx) = spkCounts; % Mark spike presentations
