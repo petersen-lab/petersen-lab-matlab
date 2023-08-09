@@ -26,7 +26,7 @@ function thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, 
 %     default, all values are included.
 %   figPath (char, optional, keyword): a shape-(1, J) character array
 %     specifying the full folder path for saving figures. If left empty,
-%     figures are not saved (default = []).
+%     figures are not saved (default = '').
 %
 % Returns:
 %   None.
@@ -47,7 +47,7 @@ arguments
   unitTimes (:,1) {mustBeA(unitTimes,'cell')}
   figTitle (1,:) {mustBeNonzeroLengthText}
   options.include (:,:) {mustBeA(options.include,'logical')} = []
-  options.figPath (1,:) {mustBeNonzeroLengthText} = [];
+  options.figPath (1,:) {mustBeText} = '';
 end
 
 % Parse input
@@ -77,7 +77,7 @@ for f = 1:numel(frequencies)
   % Label axes and figures
   xlabel('Electrode #')
   ylabel('Phase (rad)')
-  tH = title([figTitle '. Frequency: ' num2str(frequencies(f))]);
+  tH = title([figTitle ', Frequency: ' num2str(frequencies(f))]);
 
   % Print stats
   str = ['r=' num2str(r), ', p=' num2str(pval)];
@@ -99,11 +99,13 @@ for f = 1:numel(frequencies)
       mkdir(options.figPath);
     end
     filename = strrep(tH.String,' ','_');
-    filename = strrep(filename,':','_');
-    filename = strrep(filename,'-','_');
-    filename = strrep(filename,'^','');
-    filename = strrep(filename,'{','');
-    filename = strrep(filename,'}','');
+    filename = strrep(filename, ',','_');
+    filename = strrep(filename, '-','_');
+    filename = strrep(filename, ':','' );
+    filename = strrep(filename, '^','' );
+    filename = strrep(filename, '{','' );
+    filename = strrep(filename, '}','' );
+    filename = strrep(filename, '.','p');
     filename = [options.figPath filesep filename '.fig']; %#ok<*AGROW> 
     savefig(fH,filename,'compact');
   end

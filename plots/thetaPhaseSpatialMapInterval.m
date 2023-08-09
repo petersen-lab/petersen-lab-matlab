@@ -1,9 +1,9 @@
-function thetaPhaseSpatialMapInterval(intervals, unitSpikeTimes, ...
-  populationSpikeTimes, maxChan, figTitle, resamplingInterval, ...
-  frequencyRange, options)
-% thetaPhaseSpatialMapInterval(intervals, unitSpikeTimes, ...
-%   populationSpikeTimes, maxChan, figTitle, resamplingInterval, ...
-%   frequencyRange, <options>)
+function fullCoherence = thetaPhaseSpatialMapInterval(intervals, ...
+  unitSpikeTimes, populationSpikeTimes, maxChan, figTitle, ...
+  resamplingInterval, frequencyRange, options)
+% fullCoherence = thetaPhaseSpatialMapInterval(intervals, ...
+%   unitSpikeTimes, populationSpikeTimes, maxChan, figTitle, ...
+%   resamplingInterval, frequencyRange, <options>)
 %
 % A wrapper function for thetaPhaseSpatialMap function. Function calculates
 % phase-electrode correlations and related statistics and plots the
@@ -42,17 +42,50 @@ function thetaPhaseSpatialMapInterval(intervals, unitSpikeTimes, ...
 %   parallelise (logical, optional, keyword): a shape-(1, 1) logical scalar
 %     for performing coherence analysis using the parfor loop
 %     (default = true).
+%   include (logical, optional, keyword): a shape-(M, 1) logical array
+%     matching the shape of the unitSpikeTimes array and marking units to
+%     be included in the analysis correlation analyses. By default, all
+%     values are included.
 %   figPath (char, optional, keyword): a shape-(1, J) character array
 %     specifying the full folder path for saving figures. If left empty,
-%     figures are not saved (default = []).
+%     figures are not drawn and not saved (default = '').
 %
 % Returns:
-%   None.
+%   fullCoherence (struct): a shape-(1, 1) scalar structure with the
+%     following fields:
+%     coherence (numeric): a shape-(G, H) numeric array containing
+%       coherence values for the signal with respect to the reference
+%       (range = [0 1]).
+%     coherenceConf (numeric): a shape-(G, H) numeric array containing
+%       coherence 95% confidence interval. Add/subtract this interval to
+%       actual coherence values to get upper and lower intervals
+%       (coherence +/- coherenceConf).
+%     phase (numeric): a shape-(G, H) numeric array containing phase radian
+%       values for the signal with respect to the reference. Negative phase
+%       indicates lag, whereas positive phase indicates lead.
+%     phaseConf (cell): a shape-(G, 1) cell array containing phase upper
+%       and lower 95% confidence intervals (rad). Each cell contains a
+%       shape-(2, L) numeric array.
+%     frequency (numeric): a shape-(G, H) numeric array containing
+%       frequency values corresponding to coherence and phase estimates.
+%     rateAdjustedCoherence (numeric): a shape-(G, H) numeric array
+%       containing firing rate adjusted coherence.
+%     rateAdjustedCoherenceConf (numeric): a shape-(G, H) numeric array
+%       containing firing rate adjusted coherence 95% confidence interval.
+%       Add/subtract this interval to actual coherence values to get upper
+%       and lower intervals
+%       (rateAdjustedCoherence +/- rateAdjustedCoherenceConf).
+%     kappaSignal (numeric): a shape-(G, H) numeric array with coherence
+%       firing rate adjustment factor kappa1 corresponding to the primary
+%       signal.
+%     kappaReference (numeric): a shape-(G, H) numeric array with
+%       coherence firing rate adjustment factor kappa2 corresponding to the
+%       secondary (reference) signal.
 %
 % Comments:
 %   The top left corner shows the ratio of units with significant phase and
 %   the total numer of units with non-zero spike counts. The bottom
-%   rightcorner shows the correlation coeffiecient and its significance
+%   right corner shows the correlation coeffiecient and its significance
 %   p-value.
 %
 % Authors:
@@ -68,7 +101,8 @@ arguments
   frequencyRange (1,2) {mustBeNumeric,mustBeNonnegative}
   options.coherenceRange {mustBeMember(options.coherenceRange,{'full','aboveMean','high'})} = 'full'
   options.parallelise (1,1) {mustBeA(options.parallelise,'logical')} = true
-  options.figPath (1,:) {mustBeNonzeroLengthText} = [];
+  options.include (:,:) {mustBeA(options.include,'logical')} = []
+  options.figPath (1,:) {mustBeText} = '';
 end
 
 %% Parse input
@@ -78,10 +112,17 @@ elseif strcmpi(options.coherenceRange,'high')
   n = 76;
 end
 
+if isempty(options.include)
+  options.include = true(size(unitSpikeTimes));
+end
+
 %% Work out intervals of interest
 if ~isempty(intervals)
   unitSpikeTimes = selectCellValues(unitSpikeTimes, intervals);
   populationSpikeTimes = selectArrayValues(populationSpikeTimes, intervals);
+else
+  unitSpikeTimes = [];
+  populationSpikeTimes = [];
 end
 
 %% Carry out coherence and correlation analyses
@@ -104,9 +145,16 @@ else
       includeUnits(fullCoherence.coherence(:,f) >= coherenceThr(f),f) = true;
     end
   end
+  options.include = repmat(options.include, 1, size(fullCoherence.coherence,2));
+  includeUnits = logical(options.include & includeUnits);
+  if ~any(includeUnits)
+    return
+  end
 
   % plot phase spatial map
-  thetaPhaseSpatialMap(fullCoherence.phase, maxChan, ...
-    fullCoherence.frequency(1,:), unitSpikeTimes, figTitle, ...
-    include=includeUnits, figPath=options.figPath);
+  if ~isempty(options.figPath)
+    thetaPhaseSpatialMap(fullCoherence.phase, maxChan, ...
+      fullCoherence.frequency(1,:), unitSpikeTimes, figTitle, ...
+      include=includeUnits, figPath=options.figPath);
+  end
 end

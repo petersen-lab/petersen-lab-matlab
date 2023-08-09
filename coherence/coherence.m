@@ -75,7 +75,8 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal
 %     reduction (default = false).
 %
 % Returns:
-%   fullCoherence (struct): a structure with the following fields:
+%   fullCoherence (struct): a shape-(1, 1) scalar structure with the
+%     following fields:
 %     coherence (numeric): a shape-(K, L) numeric array containing
 %       coherence values for the signal with respect to the reference
 %       (range = [0 1]).
