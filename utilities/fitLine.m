@@ -1,5 +1,5 @@
 function [yFit, slope, coefficients] = fitLine(x, y, options)
-% [yFit, slope, coefficients] = fitLine(x, y, <type>)
+% [yFit, slope, coefficients] = fitLine(x, y, <options>)
 %
 % Function fits a line to the data y given x.
 % 
@@ -11,7 +11,12 @@ function [yFit, slope, coefficients] = fitLine(x, y, options)
 %   type (char, optional, keyword): a shape-(1, M) character array
 %     desribing data types. Could be one of the following values:
 %       'linear-linear' - meaning both data types are linear (default).
-%       'linear-circular' - meaning that x is linear and y is circular.
+%       'linear-circular-fma' - meaning that x is linear and y is circular
+%         (non-parametric). This function is sourced from FMA Toolbox.
+%       'linear-circular-pp' - meaning that x is linear and y is circular.
+%         This function is used by Peter Petersen.
+%   corrCoef (numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     with correlation coefficient.
 % 
 % Returns:
 %   yFit (numeric): a shape-(1, L) numeric array of fitted y values
@@ -37,6 +42,8 @@ function [yFit, slope, coefficients] = fitLine(x, y, options)
 % Dependencies:
 %   FMA Toolbox (https://github.com/michael-zugaro/FMAToolbox).
 %   Circular Statistics Toolbox (https://github.com/circstat/circstat-matlab).
+%   Code_Petersen_Buzsaki_Neuron_2020/CircularLinearRegression.m
+%     (https://github.com/petersenpeter/Code_Petersen_Buzsaki_Neuron_2020/blob/master/CircularLinearRegression.m).
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
@@ -44,7 +51,8 @@ function [yFit, slope, coefficients] = fitLine(x, y, options)
 arguments
   x (1,:) {mustBeVector}
   y (1,:) {mustBeVector}
-  options.type {mustBeMember(options.type,{'linear-linear','linear-circular'})} = 'linear-linear'
+  options.type {mustBeMember(options.type,{'linear-linear','linear-circular-fma','linear-circular-pp'})} = 'linear-linear'
+  options.corrCoef (1,1) {mustBeInRange(options.corrCoef,-1,1,'inclusive')} = 0
 end
 
 % Adjust for non-unique x-values
@@ -66,10 +74,10 @@ yAdjusted = yAdjusted(~points2exclude);
 % Fit the line
 if strcmpi(options.type, 'linear-linear')
   coefficients = polyfit(xAdjusted, yAdjusted, 1);
-  yFit = polyval(coefficients , xAdjusted);
-  slope = coefficients(1);
-elseif strcmpi(options.type, 'linear-circular')
-  coefficients = CircularRegression(xAdjusted, yAdjusted);
-  yFit = coefficients(1).*xAdjusted + coefficients(2);
-  slope = coefficients(1);
+elseif strcmpi(options.type, 'linear-circular-fma')
+  coefficients = CircularRegression(xAdjusted, yAdjusted, options.corrCoef);
+elseif strcmpi(options.type, 'linear-circular-pp')
+  [coefficients(1), coefficients(2), R_value] = CircularLinearRegression(yAdjusted, xAdjusted, options.corrCoef)
 end
+yFit = coefficients(1).*xAdjusted + coefficients(2);
+slope = coefficients(1);

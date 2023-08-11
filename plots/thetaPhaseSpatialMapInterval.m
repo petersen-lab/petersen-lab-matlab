@@ -155,6 +155,6 @@ else
   if ~isempty(options.figPath)
     thetaPhaseSpatialMap(fullCoherence.phase, maxChan, ...
       fullCoherence.frequency(1,:), unitSpikeTimes, figTitle, ...
-      include=includeUnits, figPath=options.figPath);
+      include=includeUnits, fitFunc='fma&pp', figPath=options.figPath);
   end
 end

@@ -2,7 +2,7 @@ function contaminationPercentage = refractoryContamination(spikeTimes)
 % contaminationPercentage = refractoryContamination(spikeTimes)
 %
 % Function calculates the contamination percentage of the spiking
-% autocorrelagram (ACG) 1.5 ms refractory period around zero lag relative
+% autocorrelagram (ACG) 1 ms refractory period around zero lag relative
 % to the ACG shoulder (1000-1500 ms away from the zero lag).
 %
 % Args:
@@ -32,4 +32,7 @@ duration = 3; % in seconds
 [acg,t] = CCG(spikeTimes, ones(size(spikeTimes)), 'binSize',binSize, 'duration',duration); % Calls CellExplorer CCG function (make sure no conflict with other CCG instances on the Matlab path)
 
 % Calculate the refractory period contamination percentage relative to the ACG shoulder.
-contaminationPercentage = mean(acg(t>=-0.0015 & t<=0.0015))/mean(acg(t>=1 & t<=1.5));
+refractoryPeriod = 0.001; % in seconds
+acgShoulderPeriod = [1 1.5]; % ACG shoulder period in seconds
+contaminationPercentage = mean(acg(t>=-refractoryPeriod & t<=refractoryPeriod))/ ...
+  mean(acg(t>=acgShoulderPeriod(1) & t<=acgShoulderPeriod(2)));

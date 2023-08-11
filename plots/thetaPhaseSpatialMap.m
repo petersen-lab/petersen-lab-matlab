@@ -1,5 +1,5 @@
 function thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, options)
-% thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, <include>)
+% thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, <options>)
 %
 % Function calculates phase-electrode correlations and related statistics
 % and plots the correlations.
@@ -24,7 +24,15 @@ function thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, 
 %     matching the shape of the phase array and marking values to be
 %     included in the analysis corresponding to most coherent units. By
 %     default, all values are included.
-%   figPath (char, optional, keyword): a shape-(1, J) character array
+%   fitFunc (char, optional, keyword): a shape-(1, J) character array
+%     specifying which function should be used to fit the linear-circular
+%     regression line. The available options are:
+%       'fma' - CircularRegression function from FMA Toolbox
+%               (https://github.com/michael-zugaro/FMAToolbox).
+%       'pp' - CircularLinearRegression used by Peter Petersen (default)
+%              (https://github.com/petersenpeter/Code_Petersen_Buzsaki_Neuron_2020/blob/master/CircularLinearRegression.m).
+%       'fma&pp' - both functions.
+%   figPath (char, optional, keyword): a shape-(1, K) character array
 %     specifying the full folder path for saving figures. If left empty,
 %     figures are not saved (default = '').
 %
@@ -47,7 +55,8 @@ arguments
   unitTimes (:,1) {mustBeA(unitTimes,'cell')}
   figTitle (1,:) {mustBeNonzeroLengthText}
   options.include (:,:) {mustBeA(options.include,'logical')} = []
-  options.figPath (1,:) {mustBeText} = '';
+  options.fitFunc (1,:) {mustBeMember(options.fitFunc, {'fma','pp','fma&pp'})} = 'pp'
+  options.figPath (1,:) {mustBeText} = ''
 end
 
 % Parse input
@@ -65,14 +74,25 @@ for f = 1:numel(frequencies)
     phase(options.include(:,f),f), '.', 'MarkerSize',10)
 
   % Draw the fitted line
-  [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
-    phase(options.include(:,f),f), type='linear-circular');
   xLim = xlim;
   xAxisLength = xLim(2) - xLim(1);
   xAxisStep = xAxisLength/10000;
   x = xLim(1):xAxisStep:xLim(2);
-  yFit = x.*slope + coefficients(2);
-  hold on; plot(x, yFit, 'k--'); hold off;
+  if strcmpi(options.fitFunc, 'fma') || strcmpi(options.fitFunc, 'fma&pp')
+    [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
+      phase(options.include(:,f),f), type='linear-circular-fma', corrCoef=r);
+    yFit = x.*slope + coefficients(2);
+    hold on; p1 = plot(x, yFit, 'k--'); hold off;
+  end
+  if strcmpi(options.fitFunc, 'pp') || strcmpi(options.fitFunc, 'fma&pp')
+    [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
+      phase(options.include(:,f),f), type='linear-circular-pp', corrCoef=r);
+    yFit = x.*slope + coefficients(2);
+    hold on; p2 = plot(x, yFit, 'b--'); hold off;
+  end
+  if strcmpi(options.fitFunc, 'fma&pp')
+    legend([p1,p2], {'fma','pp'})
+  end
 
   % Label axes and figures
   xlabel('Electrode #')

@@ -40,7 +40,7 @@ end
 % Parse input
 spikeTimes = spikeTimes(:)';
 
-% Set times start and end times for all windows
+% Set start and end times for all windows
 if options.stepSize
   startTimes = options.startTime:options.stepSize:spikeTimes(end);
   endTimes = options.startTime+options.windowSize:options.stepSize:spikeTimes(end);
