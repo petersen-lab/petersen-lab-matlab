@@ -77,7 +77,7 @@ if strcmpi(options.type, 'linear-linear')
 elseif strcmpi(options.type, 'linear-circular-fma')
   coefficients = CircularRegression(xAdjusted, yAdjusted, options.corrCoef);
 elseif strcmpi(options.type, 'linear-circular-pp')
-  [coefficients(1), coefficients(2), R_value] = CircularLinearRegression(yAdjusted, xAdjusted, options.corrCoef)
+  [coefficients(1), coefficients(2)] = CircularLinearRegression(yAdjusted, xAdjusted, options.corrCoef);
 end
 yFit = coefficients(1).*xAdjusted + coefficients(2);
 slope = coefficients(1);

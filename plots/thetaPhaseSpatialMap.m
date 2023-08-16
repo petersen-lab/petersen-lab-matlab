@@ -1,4 +1,4 @@
-function thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, options)
+function [r, pval] = thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, options)
 % thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, <options>)
 %
 % Function calculates phase-electrode correlations and related statistics
@@ -27,9 +27,9 @@ function thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, 
 %   fitFunc (char, optional, keyword): a shape-(1, J) character array
 %     specifying which function should be used to fit the linear-circular
 %     regression line. The available options are:
-%       'fma' - CircularRegression function from FMA Toolbox
+%       'fma' - CircularRegression function from FMA Toolbox (default)
 %               (https://github.com/michael-zugaro/FMAToolbox).
-%       'pp' - CircularLinearRegression used by Peter Petersen (default)
+%       'pp' - CircularLinearRegression used by Peter Petersen
 %              (https://github.com/petersenpeter/Code_Petersen_Buzsaki_Neuron_2020/blob/master/CircularLinearRegression.m).
 %       'fma&pp' - both functions.
 %   figPath (char, optional, keyword): a shape-(1, K) character array
@@ -37,7 +37,10 @@ function thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, 
 %     figures are not saved (default = '').
 %
 % Returns:
-%   None.
+%   r (numeric): a shape-(1, N) numeric array of correlation coefficient
+%     for all phase frequencies.
+%   pval (numeric): a shape-(1, N) numeric array of p-value of
+%     corresponding correlation coefficients for all phase frequencies.
 %
 % Comments:
 %   The top left corner shows the ratio of units with significant phase and
@@ -55,7 +58,7 @@ arguments
   unitTimes (:,1) {mustBeA(unitTimes,'cell')}
   figTitle (1,:) {mustBeNonzeroLengthText}
   options.include (:,:) {mustBeA(options.include,'logical')} = []
-  options.fitFunc (1,:) {mustBeMember(options.fitFunc, {'fma','pp','fma&pp'})} = 'pp'
+  options.fitFunc (1,:) {mustBeMember(options.fitFunc, {'fma','pp','fma&pp'})} = 'fma'
   options.figPath (1,:) {mustBeText} = ''
 end
 
@@ -64,9 +67,12 @@ if isempty(options.include)
   options.include = true(size(phase));
 end
 
-for f = 1:numel(frequencies)
+nFreq = numel(frequencies);
+r = zeros(1,nFreq);
+pval = zeros(1,nFreq);
+for f = 1:nFreq
   % Calculate correlations
-  [r, pval] = corrLinearCircular(phase(options.include(:,f),f), ...
+  [r(f), pval(f)] = corrLinearCircular(phase(options.include(:,f),f), ...
     maxChan(options.include(:,f)), type='circlinearnp');
 
   % Plot data
@@ -80,13 +86,13 @@ for f = 1:numel(frequencies)
   x = xLim(1):xAxisStep:xLim(2);
   if strcmpi(options.fitFunc, 'fma') || strcmpi(options.fitFunc, 'fma&pp')
     [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
-      phase(options.include(:,f),f), type='linear-circular-fma', corrCoef=r);
+      phase(options.include(:,f),f), type='linear-circular-fma', corrCoef=r(f)*1e-6); % corrCoef=r*1e-6 provides a +/- nudge
     yFit = x.*slope + coefficients(2);
     hold on; p1 = plot(x, yFit, 'k--'); hold off;
   end
   if strcmpi(options.fitFunc, 'pp') || strcmpi(options.fitFunc, 'fma&pp')
     [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
-      phase(options.include(:,f),f), type='linear-circular-pp', corrCoef=r);
+      phase(options.include(:,f),f), type='linear-circular-pp', corrCoef=r(f));
     yFit = x.*slope + coefficients(2);
     hold on; p2 = plot(x, yFit, 'b--'); hold off;
   end
@@ -97,10 +103,10 @@ for f = 1:numel(frequencies)
   % Label axes and figures
   xlabel('Electrode #')
   ylabel('Phase (rad)')
-  tH = title([figTitle ', Frequency: ' num2str(frequencies(f))]);
+  tH = title([figTitle ', Frequency: ' num2str(frequencies(f))], 'Interpreter','none');
 
   % Print stats
-  str = ['r=' num2str(r), ', p=' num2str(pval)];
+  str = ['r=' num2str(r(f)), ', p=' num2str(pval(f))];
   yLim = ylim;
   yAxisLength = yLim(2) - yLim(1);
   text(xLim(1)+0.6*xAxisLength, yLim(1)+0.05*yAxisLength, str)

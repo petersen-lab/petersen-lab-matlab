@@ -446,6 +446,23 @@ else
   half2Coherence.kappaSignal = [];
   half2Coherence.kappaReference = [];
 end
+
+% Find the most coherent frequency
+if options.fullCoherence
+  [~, maxIdx] = max(fullCoherence.rateAdjustedCoherence,[],2,'omitnan','linear');
+  fullCoherence.mostCoherentFrequency = mode(fullCoherence.frequency(maxIdx));
+else
+  fullCoherence.mostCoherentFrequency = [];
+end
+if options.halfCoherence
+  [~, maxIdx] = max(half1Coherence.rateAdjustedCoherence,[],2,'omitnan','linear');
+  half1Coherence.mostCoherentFrequency = mode(half1Coherence.frequency(maxIdx));
+  [~, maxIdx] = max(half2Coherence.rateAdjustedCoherence,[],2,'omitnan','linear');
+  half2Coherence.mostCoherentFrequency = mode(half2Coherence.frequency(maxIdx));
+else
+  half1Coherence.mostCoherentFrequency = [];
+  half2Coherence.mostCoherentFrequency = [];
+end
 end
 
 

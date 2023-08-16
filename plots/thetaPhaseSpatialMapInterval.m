@@ -46,6 +46,9 @@ function fullCoherence = thetaPhaseSpatialMapInterval(intervals, ...
 %     matching the shape of the unitSpikeTimes array and marking units to
 %     be included in the analysis correlation analyses. By default, all
 %     values are included.
+%   maxThetaFrequency (numeric, optional, keyword): a shape-(2, E) numeric
+%     array with the first row corresponding to timestamps and the second
+%     row corresponding to the theta frequency with the largest power.
 %   figPath (char, optional, keyword): a shape-(1, J) character array
 %     specifying the full folder path for saving figures. If left empty,
 %     figures are not drawn and not saved (default = '').
@@ -102,7 +105,8 @@ arguments
   options.coherenceRange {mustBeMember(options.coherenceRange,{'full','aboveMean','high'})} = 'full'
   options.parallelise (1,1) {mustBeA(options.parallelise,'logical')} = true
   options.include (:,:) {mustBeA(options.include,'logical')} = []
-  options.figPath (1,:) {mustBeText} = '';
+  options.maxThetaFrequency (2,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.figPath (1,:) {mustBeText} = ''
 end
 
 %% Parse input
@@ -153,8 +157,42 @@ else
 
   % plot phase spatial map
   if ~isempty(options.figPath)
-    thetaPhaseSpatialMap(fullCoherence.phase, maxChan, ...
+    % All frequencies
+    [~, pval] = thetaPhaseSpatialMap(fullCoherence.phase, maxChan, ...
       fullCoherence.frequency(1,:), unitSpikeTimes, figTitle, ...
-      include=includeUnits, fitFunc='fma&pp', figPath=options.figPath);
+      include=includeUnits, figPath=options.figPath);
+
+    % Most coherent frequency
+    [~, maxIdx] = max(fullCoherence.rateAdjustedCoherence(includeUnits),[],2,'omitnan','linear');
+    frequency = fullCoherence.frequency(includeUnits);
+    mostCoherentFrequency = mode(frequency(maxIdx));
+    fInd = find(frequency(1,:) == mostCoherentFrequency);
+    figTitleCoh = [figTitle ' (most coherent frequency)'];
+    thetaPhaseSpatialMap(fullCoherence.phase(:,fInd), maxChan, ...
+      fullCoherence.frequency(1,fInd), unitSpikeTimes, figTitleCoh, ...
+      include=includeUnits(:,fInd), figPath=options.figPath);
+
+    % Most powerful frequency
+    if ~isempty(options.maxThetaFrequency)
+      maxThetaFrequency = [];
+      for interval = 1:size(intervals,1)
+        maxThetaFrequency = [maxThetaFrequency options.maxThetaFrequency(2, ...
+          options.maxThetaFrequency(1,:) >= intervals(interval,1) & ...
+          options.maxThetaFrequency(1,:) <= intervals(interval,2))]; %#ok<*AGROW>
+      end
+      maxThetaFrequency = mean(maxThetaFrequency);
+      [~,fInd] = min(abs(fullCoherence.frequency(1,:) - maxThetaFrequency));
+      figTitlePower = [figTitle ' (most powerful frequency)'];
+      thetaPhaseSpatialMap(fullCoherence.phase(:,fInd), maxChan, ...
+        fullCoherence.frequency(1,fInd), unitSpikeTimes, figTitlePower, ...
+        include=includeUnits(:,fInd), figPath=options.figPath);
+    end
+
+    % Most significant frequency
+    [~, fInd] = min(pval);
+    figTitleSignificant = [figTitle ' (most significant frequency)'];
+    thetaPhaseSpatialMap(fullCoherence.phase(:,fInd), maxChan, ...
+      fullCoherence.frequency(1,fInd), unitSpikeTimes, figTitleSignificant, ...
+      include=includeUnits(:,fInd), figPath=options.figPath);
   end
 end
