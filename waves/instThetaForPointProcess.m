@@ -85,6 +85,8 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     instPhaseUnwrapped (numeric): a shape-(1, L) numeric array of
 %       unwrapped theta oscillation phases estimated using Hilbert
 %       transform.
+%     amplitude (numeric): a shape-(1, L) numeric array of amplitude of the
+%       filtered and Hilbert-transformed spiking signal.
 %     instPhaseTimestamps (numeric): a shape-(1, L) numeric array of
 %       timestamps corresponding to theta oscillation phase estimate array.
 %     spikingRate (numeric): a shape-(1, L) numeric array of convolved
@@ -183,6 +185,9 @@ hilbert1 = hilbert(spikingRateFiltered); % Apply Hilbert transform
 populationRatePhase = atan2(imag(hilbert1), real(hilbert1));
 populationRatePhaseUnwrapped = unwrap(populationRatePhase);
 
+% Obtain the amplitude of the Hilbert-transformed signal
+amplitude = abs(hilbert1);
+
 % Calculate instantaneous frequency
 instFreq = (convolvedSR)./diff(find(diff(populationRatePhase>0)==1)); % Find points where phase switches from negative to positive and use the distance between these points to calculate the instantaneous frequency
 instTime = cumsum(diff(find(diff(populationRatePhase>0)==1)))/convolvedSR; % Get corresponding times
@@ -261,6 +266,7 @@ instTheta.instFrequency = instFreq';
 instTheta.instTimestamps = instTime';
 instTheta.instPhase = populationRatePhase';
 instTheta.instPhaseUnwrapped = populationRatePhaseUnwrapped';
+instTheta.amplitude = ampltude';
 instTheta.instPhaseTimestamps = spikeTimeBins;
 instTheta.spikingRate = spikingRate;
 instTheta.spikingRateFiltered = spikingRateFiltered';
