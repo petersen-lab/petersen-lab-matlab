@@ -1,5 +1,5 @@
-function fullCoherence = thetaPhaseSpatialMapInterval(intervals, ...
-  unitSpikeTimes, populationSpikeTimes, maxChan, figTitle, ...
+function [fullCoherence, thetaPhaseTopography] = thetaPhaseSpatialMapInterval( ...
+  intervals, unitSpikeTimes, populationSpikeTimes, maxChan, figTitle, ...
   resamplingInterval, frequencyRange, options)
 % fullCoherence = thetaPhaseSpatialMapInterval(intervals, ...
 %   unitSpikeTimes, populationSpikeTimes, maxChan, figTitle, ...
@@ -84,12 +84,43 @@ function fullCoherence = thetaPhaseSpatialMapInterval(intervals, ...
 %     kappaReference (numeric): a shape-(G, H) numeric array with
 %       coherence firing rate adjustment factor kappa2 corresponding to the
 %       secondary (reference) signal.
+%   thetaPhaseTopography (struct): a shape-(1, 1) scalar structure with the
+%     following fields:
+%     frequency (numeric): a shape-(1, H) numeric array containing
+%       frequency values corresponding to columns of phase estimates.
+%     phase (numeric): a shape-(G, H) numeric array containing phase radian
+%       values for the signal with respect to the reference. Negative phase
+%       indicates lag, whereas positive phase indicates lead.
+%     maxChan (numeric): a shape-(M, 1) numeric array of recording channels
+%       with the largest amplitude waveforms for corresponding units.
+%     includeUnits (logical): a shape-(G, H) logical array corresponding to
+%       the shape of the phase array and indicating which phase values were
+%       included in correlation analyses.
+%     r (numeric): a shape-(1, H) numeric array with correlation
+%       coefficients for a circular-linear correlation analysis between
+%       individual phase array columns and the maxChan array.
+%     pval (numeric): a shape-(1, H) numeric array with correlation
+%       coefficient significance p-values for a circular-linear correlation
+%       analysis between individual phase array columns and the maxChan
+%       array.
+%     coefficients (numeric): a shape-(H, 2) numeric array with linear
+%       regression equation coeffiecients corresponding to correlation
+%       coefficients (slopes in column 1 and y-intercepts in column 2). The
+%       first dimension of the array corresponds to frequencies.
+%     fIndMostCoh (numeric): a shape-(1, 1) numeric scalar indexing
+%       frequency with most coherent phase values on average across all
+%       units.
+%     fIndMostPower (numeric): a shape-(1, 1) numeric scalar indexing
+%       frequency with the largest power within the theta frequency band
+%       for the population rate.
+%     fIndMostSignificant (numeric): a shape-(1, 1) numeric scalar indexing
+%       frequency that is the most significant (the lowest p-value).
 %
 % Comments:
 %   The top left corner shows the ratio of units with significant phase and
-%   the total numer of units with non-zero spike counts. The bottom
-%   right corner shows the correlation coeffiecient and its significance
-%   p-value.
+%   the total numer of units with non-zero spike counts. The top right
+%   corner shows the fitted line equation. The bottom right corner shows
+%   the correlation coeffiecient and its significance p-value.
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com)
@@ -158,19 +189,19 @@ else
   % plot phase spatial map
   if ~isempty(options.figPath)
     % All frequencies
-    [~, pval] = thetaPhaseSpatialMap(fullCoherence.phase, maxChan, ...
-      fullCoherence.frequency(1,:), unitSpikeTimes, figTitle, ...
+    [r, pval, coefficients] = thetaPhaseSpatialMap(fullCoherence.phase, ...
+      maxChan, fullCoherence.frequency(1,:), unitSpikeTimes, figTitle, ...
       include=includeUnits, figPath=options.figPath);
 
     % Most coherent frequency
     [~, maxIdx] = max(fullCoherence.rateAdjustedCoherence(includeUnits),[],2,'omitnan','linear');
     frequency = fullCoherence.frequency(includeUnits);
     mostCoherentFrequency = mode(frequency(maxIdx));
-    fInd = find(frequency(1,:) == mostCoherentFrequency);
-    figTitleCoh = [figTitle ' (most coherent frequency)'];
-    thetaPhaseSpatialMap(fullCoherence.phase(:,fInd), maxChan, ...
-      fullCoherence.frequency(1,fInd), unitSpikeTimes, figTitleCoh, ...
-      include=includeUnits(:,fInd), figPath=options.figPath);
+    fIndMostCoh = find(frequency(1,:) == mostCoherentFrequency);
+    figTitleMostCoh = [figTitle ' (most coherent freq)'];
+    thetaPhaseSpatialMap(fullCoherence.phase(:,fIndMostCoh), maxChan, ...
+      fullCoherence.frequency(1,fIndMostCoh), unitSpikeTimes, figTitleMostCoh, ...
+      include=includeUnits(:,fIndMostCoh), figPath=options.figPath);
 
     % Most powerful frequency
     if ~isempty(options.maxThetaFrequency)
@@ -181,18 +212,31 @@ else
           options.maxThetaFrequency(1,:) <= intervals(interval,2))]; %#ok<*AGROW>
       end
       maxThetaFrequency = mean(maxThetaFrequency);
-      [~,fInd] = min(abs(fullCoherence.frequency(1,:) - maxThetaFrequency));
-      figTitlePower = [figTitle ' (most powerful frequency)'];
-      thetaPhaseSpatialMap(fullCoherence.phase(:,fInd), maxChan, ...
-        fullCoherence.frequency(1,fInd), unitSpikeTimes, figTitlePower, ...
-        include=includeUnits(:,fInd), figPath=options.figPath);
+      [~,fIndMostPower] = min(abs(fullCoherence.frequency(1,:) - maxThetaFrequency));
+      figTitleMostPower = [figTitle ' (most powerful freq)'];
+      thetaPhaseSpatialMap(fullCoherence.phase(:,fIndMostPower), maxChan, ...
+        fullCoherence.frequency(1,fIndMostPower), unitSpikeTimes, figTitleMostPower, ...
+        include=includeUnits(:,fIndMostPower), figPath=options.figPath);
     end
 
     % Most significant frequency
-    [~, fInd] = min(pval);
-    figTitleSignificant = [figTitle ' (most significant frequency)'];
-    thetaPhaseSpatialMap(fullCoherence.phase(:,fInd), maxChan, ...
-      fullCoherence.frequency(1,fInd), unitSpikeTimes, figTitleSignificant, ...
-      include=includeUnits(:,fInd), figPath=options.figPath);
+    [~, fIndMostSignificant] = min(pval);
+    figTitleMostSignificant = [figTitle ' (most significant freq)'];
+    thetaPhaseSpatialMap(fullCoherence.phase(:,fIndMostSignificant), ...
+      maxChan, fullCoherence.frequency(1,fIndMostSignificant), ...
+      unitSpikeTimes, figTitleMostSignificant, ...
+      include=includeUnits(:,fIndMostSignificant), figPath=options.figPath);
   end
+
+  % Assign output
+  thetaPhaseTopography.frequency = fullCoherence.frequency(1,:);
+  thetaPhaseTopography.phase = fullCoherence.phase;
+  thetaPhaseTopography.includeUnits = includeUnits;
+  thetaPhaseTopography.maxChan = maxChan;
+  thetaPhaseTopography.r = r;
+  thetaPhaseTopography.pval = pval;
+  thetaPhaseTopography.coefficients = coefficients;
+  thetaPhaseTopography.fIndMostCoh = fIndMostCoh;
+  thetaPhaseTopography.fIndMostPower = fIndMostPower;
+  thetaPhaseTopography.fIndMostSignificant = fIndMostSignificant;
 end

@@ -1,4 +1,4 @@
-function [r, pval] = thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, options)
+function [r, pval, coefficients] = thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, options)
 % thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes, figTitle, <options>)
 %
 % Function calculates phase-electrode correlations and related statistics
@@ -41,6 +41,8 @@ function [r, pval] = thetaPhaseSpatialMap(phase, maxChan, frequencies, unitTimes
 %     for all phase frequencies.
 %   pval (numeric): a shape-(1, N) numeric array of p-value of
 %     corresponding correlation coefficients for all phase frequencies.
+%   coefficients (numeric): a shape-(N, 2) numeric array of the fitted line
+%     equation coeffients (slope and y-intercept).
 %
 % Comments:
 %   The top left corner shows the ratio of units with significant phase and
@@ -70,6 +72,7 @@ end
 nFreq = numel(frequencies);
 r = zeros(1,nFreq);
 pval = zeros(1,nFreq);
+coefficients = zeros(nFreq,2);
 for f = 1:nFreq
   % Calculate correlations
   [r(f), pval(f)] = corrLinearCircular(phase(options.include(:,f),f), ...
@@ -85,15 +88,15 @@ for f = 1:nFreq
   xAxisStep = xAxisLength/10000;
   x = xLim(1):xAxisStep:xLim(2);
   if strcmpi(options.fitFunc, 'fma') || strcmpi(options.fitFunc, 'fma&pp')
-    [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
+    [~, slope, coefficients(f,:)] = fitLine(maxChan(options.include(:,f)), ...
       phase(options.include(:,f),f), type='linear-circular-fma', corrCoef=r(f)*1e-6); % corrCoef=r*1e-6 provides a +/- nudge
-    yFit = x.*slope + coefficients(2);
+    yFit = x.*slope + coefficients(f,2);
     hold on; p1 = plot(x, yFit, 'k--'); hold off;
   end
   if strcmpi(options.fitFunc, 'pp') || strcmpi(options.fitFunc, 'fma&pp')
-    [~, slope, coefficients] = fitLine(maxChan(options.include(:,f)), ...
+    [~, slope, coefficients(f,:)] = fitLine(maxChan(options.include(:,f)), ...
       phase(options.include(:,f),f), type='linear-circular-pp', corrCoef=r(f));
-    yFit = x.*slope + coefficients(2);
+    yFit = x.*slope + coefficients(f,2);
     hold on; p2 = plot(x, yFit, 'b--'); hold off;
   end
   if strcmpi(options.fitFunc, 'fma&pp')
@@ -103,7 +106,7 @@ for f = 1:nFreq
   % Label axes and figures
   xlabel('Electrode #')
   ylabel('Phase (rad)')
-  tH = title([figTitle ', Frequency: ' num2str(frequencies(f))], 'Interpreter','none');
+  tH = title([figTitle ', Freq: ' num2str(round(frequencies(f),1))], 'Interpreter','none');
 
   % Print stats
   str = ['r=' num2str(r(f)), ', p=' num2str(pval(f))];
@@ -118,6 +121,14 @@ for f = 1:nFreq
     options.include(nonEmptyUnits,f));
   str = ['n=' num2str(significantUnitCount), '/' num2str(unitCount)];
   text(xLim(1)+0.05*xAxisLength, yLim(1)+0.95*yAxisLength, str)
+
+  % Print the line equation
+  if coefficients(f,2) >= 0
+    lineEqStr = [num2str(coefficients(f,1)) 'x+' num2str(coefficients(f,2))];
+  else
+    lineEqStr = [num2str(coefficients(f,1)) 'x' num2str(coefficients(f,2))];
+  end
+  text(xLim(1)+0.6*xAxisLength, yLim(1)+0.95*yAxisLength, lineEqStr)
 
   % Save figures
   if ~isempty(options.figPath)
