@@ -1,4 +1,4 @@
-function [spikes_presentation,time_bins] = spikes_convolution(spikes, stepsize, convolution_points, startTime)
+function [spikes_presentation,time_bins,parameters] = spikes_convolution(spikes, stepsize, convolution_points, startTime)
 % Gaussian convolution of the spikes raster into continuous rates 
 % Inputs
 %   spikes              % Spikes struct with numcells and times fields
@@ -7,7 +7,9 @@ function [spikes_presentation,time_bins] = spikes_convolution(spikes, stepsize, 
 %   startTime           % start time bin (default = stepsize)
 %
 % Output
-%   spikes_presentation_all : 
+%   spikes_presentation
+%   time_bins
+%   parameters (stepsize, convolution_points, startTime)
 
 if nargin < 2
     % Setting default convolution points (steps)
@@ -39,3 +41,8 @@ for i = 1:spikes.numcells
     % Convoluting the spike times with a n points gaussian convolution
     spikes_presentation(i,:) = nanconv(spikes_presentation(i,:),gausswin(convolution_points)'/sum(gausswin(convolution_points)),'edge');
 end
+
+% List processing paprameters
+parameters.stepsize = stepsize;
+parameters.convolution_points = convolution_points;
+parameters.startTime = startTime;

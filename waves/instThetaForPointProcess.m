@@ -81,12 +81,14 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     instTimestamps (numeric): a shape-(1, K) numeric array of timestamps
 %       corresponding to instantaneous theta frequency estimates.
 %     instPhase (numeric): a shape-(1, L) numeric array of theta
-%       oscillation phases estimated using Hilbert transform.
+%       oscillation phases estimated using Hilbert transform. The number of
+%       samples is determined by the stepsize input parameter and
+%       correspond to the length of the convolved spiking rate vector.
 %     instPhaseUnwrapped (numeric): a shape-(1, L) numeric array of
 %       unwrapped theta oscillation phases estimated using Hilbert
 %       transform.
-%     amplitude (numeric): a shape-(1, L) numeric array of amplitude of the
-%       filtered and Hilbert-transformed spiking signal.
+%     amplitude (numeric): a shape-(1, L) numeric array of amplitude
+%       (envelope) of the filtered and Hilbert-transformed spiking signal.
 %     instPhaseTimestamps (numeric): a shape-(1, L) numeric array of
 %       timestamps corresponding to theta oscillation phase estimate array.
 %     spikingRate (numeric): a shape-(1, L) numeric array of convolved
