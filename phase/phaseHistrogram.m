@@ -36,7 +36,11 @@ binSize = (phaseRange(2) - phaseRange(1))/options.nBins;
 binLocs = phaseRange(1)+binSize/2:binSize:phaseRange(2);
 
 % Bin phase values
-binCounts = hist(phase, binLocs); %#ok<*HIST>
+if size(phase,1) == 1
+  binCounts = hist([phase; phase], binLocs)./2; % deal with the singular case
+else
+  binCounts = hist(phase, binLocs); %#ok<*HIST>
+end
 
 % Calculate phase means and all values per column (excludes NaNs)
 [phaseMeans, ~, totalCounts] = datamean(phase, 'circularNP');

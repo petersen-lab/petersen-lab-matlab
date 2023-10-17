@@ -1,5 +1,9 @@
-function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal, timesReference, options)
-% [coh, phi] = coherence(timesSignal, timesReference, <options>)
+function [fullCoherence, half1Coherence, half2Coherence, ...
+  fullInterpCoherence, half1InterpCoherence, half2InterpCoherence] = ...
+  coherence(timesSignal, timesReference, options)
+% [fullCoherence, half1Coherence, half2Coherence, ...
+%  fullInterpCoherence, half1InterpCoherence, half2InterpCoherence] = ...
+%  coherence(timesSignal, timesReference, <options>)
 %
 % Function calculates coherence and phase of (a) signal(s) with respect to
 % a reference signal.
@@ -23,9 +27,13 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal
 %     corresponding to the start time bin used to generate spike count
 %     vectors (or continuous resampled signal) for coherence analysis
 %     (default = 0).
-%   range (numeric, optional, keyword): a shape-(1, 2) numeric array with
-%     the frequency range for estimating coherence and phase values.
+%   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array
+%     with the frequency range for estimating coherence and phase values.
 %     Default values are [0 0.5/options.stepsize].
+%   freqGrid (numeric, optional, keyword): a shape-(1, H) numeric array
+%     with frequency interpolation points for coherence and phase values.
+%     If left empty, the original coherence analysis output frequency
+%     values are used (default).
 %   typespk1 (char, optional, keyword): a shape-(1, M) character array
 %     desribing the type of the signal. Can take one of the two values:
 %       'pb' - point process (default);
@@ -105,6 +113,8 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal
 %     kappaReference (numeric): a shape-(K, L) numeric array with
 %       coherence firing rate adjustment factor kappa2 corresponding to the
 %       secondary (reference) signal.
+%     mostCoherentFrequency (numeric): a shape-(1, 1) numeric scalar with
+%       frequency that is the most coherent on average across all signals.
 %   half1Coherence (struct): a structure with the following fields:
 %     coherence (numeric): a shape-(K, J) numeric array containing
 %       coherence values for the first half of the signal with respect to
@@ -137,9 +147,24 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherence(timesSignal
 %     kappaReference (numeric): a shape-(K, J) numeric array with
 %       coherence firing rate adjustment factor kappa2 corresponding to the
 %       secondary (reference) signal.
+%     mostCoherentFrequency (numeric): a shape-(1, 1) numeric scalar with
+%       frequency that is the most coherent on average across all 1st half
+%       signals.
 %   half2Coherence (struct): a structure with the same fields as
 %     half1Coherence but for respective 2nd halves of the signal and the
 %     reference comparisons.
+%   fullInterpCoherence (struct): a shape-(1, 1) scalar structure with the
+%     same fields as fullCoherence except for mostCoherentFrequency field.
+%     The difference here is that all values are interpolated according to
+%     freqGrid.
+%   half1InterpCoherence (struct): a shape-(1, 1) scalar structure with the
+%     same fields as half1Coherence except for mostCoherentFrequency field.
+%     The difference here is that all values are interpolated according to
+%     freqGrid.
+%   half2InterpCoherence (struct): a shape-(1, 1) scalar structure with the
+%     same fields as half2Coherence except for mostCoherentFrequency field.
+%     The difference here is that all values are interpolated according to
+%     freqGrid.
 %
 % Dependencies:
 %   Chronux Toolbox (http://chronux.org/).
@@ -155,7 +180,8 @@ arguments
   options.intervals (:,2) {mustBeNumeric,mustBeNonnegative} = [];
   options.stepsize (1,1) {mustBeNumeric,mustBePositive} = 0.002
   options.startTime (1,1) {mustBeNumeric,mustBeNonnegative} = 0
-  options.range (1,2) {mustBeNumeric,mustBeNonnegative} = [0 0]
+  options.freqRange (1,2) {mustBeNumeric,mustBeNonnegative} = [0 0]
+  options.freqGrid (1,:) {mustBeNumeric,mustBeNonnegative} = [];
   options.typespk1 {mustBeMember(options.typespk1,{'pb','c'})} = 'pb'
   options.typespk2 {mustBeMember(options.typespk2,{'pb','c'})} = 'pb'
   options.winfactor (1,1) {mustBeNumeric,mustBePositive} = 5
@@ -176,9 +202,13 @@ if ~iscell(timesSignal)
   timesSignal = {timesSignal};
 end
 timesReference = timesReference(:)';
-if options.range(2) == 0
-  options.range(2) = 0.5/options.stepsize;
+if options.freqRange(end) == 0
+  options.freqRange(end) = 0.5/options.stepsize;
 end
+if ~isempty(options.freqGrid) && numel(options.freqGrid) == 1
+  options.freqGrid = [];
+end
+
 
 % Resample signals (unit rates) and the reference (population rate)
 downsampledSignal = resampleSpikesArray(timesSignal, stepsize=options.stepsize, startTime=options.startTime);
@@ -196,7 +226,7 @@ if options.parallelise
   parfor unit = 1:nUnits
     [fullCoherence_temp{unit}, half1Coherence_temp{unit}, half2Coherence_temp{unit}] = coherenceCalc( ...
       downsampledSignal(unit,includeIdx), downsampledReference(includeIdx), ...
-      range=options.range, samplingInterval=options.stepsize, ...
+      freqRange=options.freqRange, samplingInterval=options.stepsize, ...
       typespk1=options.typespk1, typespk2=options.typespk2, ...
       winfactor=options.winfactor, freqfactor=options.freqfactor, ...
       tapers=options.tapers, decimate=options.decimate, ...
@@ -208,7 +238,7 @@ else
   for unit = 1:nUnits
     [fullCoherence_temp{unit}, half1Coherence_temp{unit}, half2Coherence_temp{unit}] = coherenceCalc( ...
       downsampledSignal(unit,includeIdx), downsampledReference(includeIdx), ...
-      range=options.range, samplingInterval=options.stepsize, ...
+      freqRange=options.freqRange, samplingInterval=options.stepsize, ...
       typespk1=options.typespk1, typespk2=options.typespk2, ...
       winfactor=options.winfactor, freqfactor=options.freqfactor, ...
       tapers=options.tapers, decimate=options.decimate, ...
@@ -272,7 +302,7 @@ if options.rateAdjust && (strcmpi(options.typespk1,'pb') || strcmpi(options.type
     mfrHalvesReference = [1 1];
   end
   [fullPSDReference, half1PSDReference, half2PSDReference] = psdCalc( ...
-    downsampledReference(includeIdx), range=options.range, ...
+    downsampledReference(includeIdx), freqRange=options.freqRange, ...
     samplingInterval=options.stepsize, typespk1=options.typespk2, ...
     winfactor=options.winfactor, freqfactor=options.freqfactor, ...
     tapers=options.tapers, decimate=options.decimate, ...
@@ -332,13 +362,13 @@ if options.rateAdjust && (strcmpi(options.typespk1,'pb') || strcmpi(options.type
     parfor unit = 1:nUnits
       if strcmpi(options.typespk1,'pb') % Mean firing rates
         [mfrFullSignal(unit), mfrHalvesSignal(unit,:)] = rateCalc( ...
-          downsampledSignal(unit,includeIdx), samplingInterval=options.stepsize); %#ok<*PFOUS> 
+          downsampledSignal(unit,includeIdx), samplingInterval=options.stepsize); %#ok<*PFOUS>
       else
         mfrFullSignal(unit) = 1;
         mfrHalvesSignal(unit,:) = [1 1];
       end
       [fullPSDSignal{unit}, half1PSDSignal{unit}, half2PSDSignal{unit}] = psdCalc( ...
-        downsampledSignal(unit,includeIdx), range=options.range, ...
+        downsampledSignal(unit,includeIdx), freqRange=options.freqRange, ...
         samplingInterval=options.stepsize, typespk1=options.typespk1, ...
         winfactor=options.winfactor, freqfactor=options.freqfactor, ...
         tapers=options.tapers, decimate=options.decimate, ...
@@ -398,7 +428,7 @@ if options.rateAdjust && (strcmpi(options.typespk1,'pb') || strcmpi(options.type
         mfrHalvesSignal(unit,:) = [1 1];
       end
       [fullPSDSignal{unit}, half1PSDSignal{unit}, half2PSDSignal{unit}] = psdCalc( ...
-        downsampledSignal(unit,includeIdx), range=options.range, ...
+        downsampledSignal(unit,includeIdx), freqRange=options.freqRange, ...
         samplingInterval=options.stepsize, typespk1=options.typespk1, ...
         winfactor=options.winfactor, freqfactor=options.freqfactor, ...
         tapers=options.tapers, decimate=options.decimate, ...
@@ -463,6 +493,83 @@ else
   half1Coherence.mostCoherentFrequency = [];
   half2Coherence.mostCoherentFrequency = [];
 end
+
+% Interpolate coherence and phase values
+if ~isempty(options.freqGrid)
+  fullInterpCoherence.coherence = interp1(fullCoherence.frequency(1,:), ...
+    fullCoherence.coherence', options.freqGrid, 'linear', 'extrap')';
+  fullInterpCoherence.coherence(fullInterpCoherence.coherence < 0) = 0;
+  fullInterpCoherence.coherenceConf = interp1(fullCoherence.frequency(1,:), ...
+    fullCoherence.coherenceConf', options.freqGrid, 'linear', 'extrap')';
+  fullInterpCoherence.coherenceConf(fullInterpCoherence.coherenceConf < 0) = 0;
+  fullInterpCoherence.phase = interpPhase(fullCoherence.frequency(1,:), ...
+    fullCoherence.phase, options.freqGrid);
+  fullInterpCoherence.phaseConf = interpPhase(fullCoherence.frequency(1,:), ...
+    fullCoherence.phaseConf, options.freqGrid);
+  fullInterpCoherence.frequency = repmat(options.freqGrid, size(fullInterpCoherence.coherence,1), 1);
+  fullInterpCoherence.rateAdjustedCoherence = interp1(fullCoherence.frequency(1,:), ...
+    fullCoherence.rateAdjustedCoherence', options.freqGrid, 'linear', 'extrap')';
+  fullInterpCoherence.rateAdjustedCoherence(fullInterpCoherence.rateAdjustedCoherence < 0) = 0;
+  fullInterpCoherence.rateAdjustedCoherenceConf = interp1(fullCoherence.frequency(1,:), ...
+    fullCoherence.rateAdjustedCoherenceConf', options.freqGrid, 'linear', 'extrap')';
+  fullInterpCoherence.rateAdjustedCoherenceConf(fullInterpCoherence.rateAdjustedCoherenceConf < 0) = 0;
+  fullInterpCoherence.kappaSignal = interp1(fullCoherence.frequency(1,:), ...
+    fullCoherence.kappaSignal', options.freqGrid, 'linear', 'extrap')';
+  fullInterpCoherence.kappaReference = interp1(fullCoherence.frequency(1,:), ...
+    fullCoherence.kappaReference', options.freqGrid, 'linear', 'extrap')';
+  if options.halfCoherence
+    half1InterpCoherence.coherence = interp1(half1Coherence.frequency(1,:), ...
+      half1Coherence.coherence', options.freqGrid, 'linear', 'extrap')';
+    half1InterpCoherence.coherence(half1InterpCoherence.coherence < 0) = 0;
+    half1InterpCoherence.coherenceConf = interp1(half1Coherence.frequency(1,:), ...
+      half1Coherence.coherenceConf', options.freqGrid, 'linear', 'extrap')';
+    half1InterpCoherence.coherenceConf(half1InterpCoherence.coherenceConf < 0) = 0;
+    half1InterpCoherence.phase = interpPhase(half1Coherence.frequency(1,:), ...
+      half1Coherence.phase, options.freqGrid);
+    half1InterpCoherence.phaseConf = interpPhase(half1Coherence.frequency(1,:), ...
+      half1Coherence.phaseConf, options.freqGrid, eliminateNegative=true);
+    half1InterpCoherence.frequency = repmat(options.freqGrid, size(half1InterpCoherence.coherence,1), 1);
+    half1InterpCoherence.rateAdjustedCoherence = interp1(half1Coherence.frequency(1,:), ...
+      half1Coherence.rateAdjustedCoherence', options.freqGrid, 'linear', 'extrap')';
+    half1InterpCoherence.rateAdjustedCoherence(half1InterpCoherence.rateAdjustedCoherence < 0) = 0;
+    half1InterpCoherence.rateAdjustedCoherenceConf = interp1(half1Coherence.frequency(1,:), ...
+      half1Coherence.rateAdjustedCoherenceConf', options.freqGrid, 'linear', 'extrap')';
+    half1InterpCoherence.rateAdjustedCoherenceConf(half1InterpCoherence.rateAdjustedCoherenceConf < 0) = 0;
+    half1InterpCoherence.kappaSignal = interp1(half1Coherence.frequency(1,:), ...
+      half1Coherence.kappaSignal', options.freqGrid, 'linear', 'extrap')';
+    half1InterpCoherence.kappaReference = interp1(half1Coherence.frequency(1,:), ...
+      half1Coherence.kappaReference', options.freqGrid, 'linear', 'extrap')';
+    
+    half2InterpCoherence.coherence = interp1(half2Coherence.frequency(1,:), ...
+      half2Coherence.coherence', options.freqGrid, 'linear', 'extrap')';
+    half2InterpCoherence.coherence(half2InterpCoherence.coherence < 0) = 0;
+    half2InterpCoherence.coherenceConf = interp1(half2Coherence.frequency(1,:), ...
+      half2Coherence.coherenceConf', options.freqGrid, 'linear', 'extrap')';
+    half2InterpCoherence.coherenceConf(half2InterpCoherence.coherenceConf < 0) = 0;
+    half2InterpCoherence.phase = interpPhase(half2Coherence.frequency(1,:), ...
+      half2Coherence.phase, options.freqGrid);
+    half2InterpCoherence.phaseConf = interpPhase(half2Coherence.frequency(1,:), ...
+      half2Coherence.phaseConf, options.freqGrid, eliminateNegative=true);
+    half2InterpCoherence.frequency = repmat(options.freqGrid, size(half2InterpCoherence.coherence,1), 1);
+    half2InterpCoherence.rateAdjustedCoherence = interp1(half2Coherence.frequency(1,:), ...
+      half2Coherence.rateAdjustedCoherence', options.freqGrid, 'linear', 'extrap')';
+    half2InterpCoherence.rateAdjustedCoherence(half2InterpCoherence.rateAdjustedCoherence < 0) = 0;
+    half2InterpCoherence.rateAdjustedCoherenceConf = interp1(half2Coherence.frequency(1,:), ...
+      half2Coherence.rateAdjustedCoherenceConf', options.freqGrid, 'linear', 'extrap')';
+    half2InterpCoherence.rateAdjustedCoherenceConf(half2InterpCoherence.rateAdjustedCoherenceConf < 0) = 0;
+    half2InterpCoherence.kappaSignal = interp1(half2Coherence.frequency(1,:), ...
+      half2Coherence.kappaSignal', options.freqGrid, 'linear', 'extrap')';
+    half2InterpCoherence.kappaReference = interp1(half2Coherence.frequency(1,:), ...
+      half2Coherence.kappaReference', options.freqGrid, 'linear', 'extrap')';
+  else
+    half1InterpCoherence = [];
+    half2InterpCoherence = [];
+  end
+else
+  fullInterpCoherence = [];
+  half1InterpCoherence = [];
+  half2InterpCoherence = [];
+end
 end
 
 
@@ -479,7 +586,7 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherenceCalc(signal,
 %     signal spike counts or a continuous signal.
 %   reference (numeric, required, positional): a shape-(1, N) numeric array
 %     of reference spike counts or a continuous reference signal.
-%   range (numeric, optional, keyword): a shape-(1, 2) numeric array with
+%   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array with
 %     the frequency range for estimating coherence and phase values.
 %     Default values are [0 0.5/options.samplingInterval].
 %   samplingInterval (numeric, optional, keyword): a shape-(1, 1) numeric
@@ -579,7 +686,7 @@ function [fullCoherence, half1Coherence, half2Coherence] = coherenceCalc(signal,
 arguments
   signal {mustBeVector,mustBeNonnegative}
   reference {mustBeVector,mustBeNonnegative}
-  options.range (1,2) {mustBeNumeric} = [0 0]
+  options.freqRange (1,2) {mustBeNumeric} = [0 0]
   options.samplingInterval (1,1) {mustBeNumeric,mustBePositive} = 0.002
   options.typespk1 {mustBeMember(options.typespk1,{'pb','c'})} = 'pb'
   options.typespk2 {mustBeMember(options.typespk2,{'pb','c'})} = 'pb'
@@ -601,11 +708,11 @@ end
 
 signal = signal(:)';
 reference = reference(:)';
-if options.range(2) == 0
-  options.range(2) = 0.5/options.samplingInterval;
+if options.freqRange(2) == 0
+  options.freqRange(2) = 0.5/options.samplingInterval;
 end
-options.minFreq = options.range(1); % A parameter used by freqDependentWindowCoherence
-options.maxFreq = options.range(2); % A parameter used by freqDependentWindowCoherence
+options.minFreq = options.freqRange(1); % A parameter used by freqDependentWindowCoherence
+options.maxFreq = options.freqRange(2); % A parameter used by freqDependentWindowCoherence
 
 [signal, reference] = padSignals(signal, reference);
 signal = double(signal);
@@ -751,7 +858,7 @@ function [fullPSD, half1PSD, half2PSD] = psdCalc(signal, options)
 % Args:
 %   signal (numeric, required, positional): a shape-(1, N) numeric array of
 %     signal spike counts or a continuous signal.
-%   range (numeric, optional, keyword): a shape-(1, 2) numeric array with
+%   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array with
 %     the frequency range for estimating PSD values. Default values are
 %     [0 0.5/options.samplingInterval].
 %   samplingInterval (numeric, optional, keyword): a shape-(1, 1) numeric
@@ -817,7 +924,7 @@ function [fullPSD, half1PSD, half2PSD] = psdCalc(signal, options)
 
 arguments
   signal {mustBeVector,mustBeNonnegative}
-  options.range (1,2) {mustBeNumeric} = [0 0]
+  options.freqRange (1,2) {mustBeNumeric} = [0 0]
   options.samplingInterval (1,1) {mustBeNumeric,mustBePositive} = 0.002
   options.typespk1 {mustBeMember(options.typespk1,{'pb','c'})} = 'pb'
   options.winfactor (1,1) {mustBeNumeric,mustBePositive} = 5
@@ -835,8 +942,8 @@ end
 if ~options.fullPSD && ~options.halfPSD
   warning('Both full and half signal duration PSD calculations disabled upon calling psdCalc function.');
 end
-options.minFreq = options.range(1); % A parameter used by freqDependentWindowCoherence
-options.maxFreq = options.range(2); % A parameter used by freqDependentWindowCoherence
+options.minFreq = options.freqRange(1); % A parameter used by freqDependentWindowCoherence
+options.maxFreq = options.freqRange(2); % A parameter used by freqDependentWindowCoherence
 
 % Calculate half PSD
 if options.halfPSD
@@ -1029,4 +1136,70 @@ alpha = mfr2/mfr1;
 kappa_temp = 1 + ((options.samplingInterval^2)*((1/alpha - 1)*mfr1 + options.beta/(alpha^2)))./psd1;
 kappa_temp(kappa_temp < 0) = NaN;
 kappa = 1./sqrt(kappa_temp);
+end
+
+
+function interpolatedPhase = interpPhase(frequency, phase, interpFrequency)
+% interpolatedPhase = interpPhase(frequency, phase, interpFrequency)
+%
+% Function interpolates phase and removes any unwarranted NaNs introduced
+% by this interpolation.
+%
+% Args:
+%   frequency (numeric, required, positional):  a shape-(1, N) numeric
+%     array with original frequency values corresponding to columns of the
+%     phase array.
+%   phase (numeric | cell, required, positional):  a shape-(M, N) numeric
+%     array or a shape-(M, 1) cell array with phase frequency profiles
+%     where the first dimension corresponds to individual units and the
+%     second dimension corresponds to frequencies (within individual cells,
+%     if a cell array).
+%   interpFrequency (numeric, required, positional):  a shape-(1, L)
+%     numeric array of frequency interpolation grid.
+%
+% Returns:
+%   interpolatedPhase (numeric): a shape-(M, L) numeric array with
+%     interpolated phase frequency profiles. The first dimension
+%     corresponds to individual units and the second dimension corresponds
+%     to the frequency interpolation grid.
+%
+% Authors:
+%   Martynas Dervinis (martynas.dervinis@gmail.com).
+
+arguments
+  frequency (1,:) {mustBeNumeric,mustBeNonnegative}
+  phase (:,:) {mustBeNumericOrListedType(phase,'cell')}
+  interpFrequency (1,:) {mustBeNumeric,mustBeNonnegative}
+end
+
+% Parse input
+if ~iscell(phase)
+  phase = {phase};
+end
+
+% Interpolate
+interpFrequencyExtended = sort(unique([interpFrequency frequency]));
+for phaseEntry = 1:numel(phase)
+  interpolatedPhase = interp1(frequency, phase{phaseEntry}', interpFrequencyExtended)';
+
+  % Remove NaNs introduced by interpolation
+  for unit = 1:size(interpolatedPhase,1)
+    existingPhaseInds = find(~isnan(interpolatedPhase(unit,:)));
+    if ~isempty(existingPhaseInds) && any(isnan(interpolatedPhase(unit,:)))
+      for phaseValueInd = existingPhaseInds
+        prevInd = max([1 phaseValueInd-1]);
+        nextInd = min([numel(interpFrequencyExtended) phaseValueInd+1]);
+        if isnan(interpolatedPhase(unit,prevInd))
+          interpolatedPhase(unit,prevInd) = interpolatedPhase(unit,phaseValueInd);
+        end
+        if isnan(interpolatedPhase(unit,nextInd))
+          interpolatedPhase(unit,nextInd) = interpolatedPhase(unit,phaseValueInd);
+        end
+      end
+    end
+  end
+
+  % Remove extra frequency columns
+  phase{phaseEntry} = interpolatedPhase(:, ismember(interpFrequencyExtended, interpFrequency));
+end
 end

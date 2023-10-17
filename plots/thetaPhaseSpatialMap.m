@@ -74,76 +74,83 @@ r = zeros(1,nFreq);
 pval = zeros(1,nFreq);
 coefficients = zeros(nFreq,2);
 for f = 1:nFreq
-  % Calculate correlations
-  [r(f), pval(f)] = corrLinearCircular(phase(options.include(:,f),f), ...
-    maxChan(options.include(:,f)), type='circlinearnp');
+  if any(~isnan(phase(options.include(:,f),f))) && ~isempty(phase(options.include(:,f),f))
+    % Calculate correlations
+    [r(f), pval(f)] = corrLinearCircular(phase(options.include(:,f),f), ...
+      maxChan(options.include(:,f)), type='circlinearnp');
 
-  % Plot data
-  fH = figure; plot(maxChan(options.include(:,f)), ...
-    phase(options.include(:,f),f), '.', 'MarkerSize',10)
+    % Plot data
+    fH = figure; plot(maxChan(options.include(:,f)), ...
+      phase(options.include(:,f),f), '.', 'MarkerSize',10)
 
-  % Draw the fitted line
-  xLim = xlim;
-  xAxisLength = xLim(2) - xLim(1);
-  xAxisStep = xAxisLength/10000;
-  x = xLim(1):xAxisStep:xLim(2);
-  if strcmpi(options.fitFunc, 'fma') || strcmpi(options.fitFunc, 'fma&pp')
-    [~, slope, coefficients(f,:)] = fitLine(maxChan(options.include(:,f)), ...
-      phase(options.include(:,f),f), type='linear-circular-fma', corrCoef=r(f)*1e-6); % corrCoef=r*1e-6 provides a +/- nudge
-    yFit = x.*slope + coefficients(f,2);
-    hold on; p1 = plot(x, yFit, 'k--'); hold off;
-  end
-  if strcmpi(options.fitFunc, 'pp') || strcmpi(options.fitFunc, 'fma&pp')
-    [~, slope, coefficients(f,:)] = fitLine(maxChan(options.include(:,f)), ...
-      phase(options.include(:,f),f), type='linear-circular-pp', corrCoef=r(f));
-    yFit = x.*slope + coefficients(f,2);
-    hold on; p2 = plot(x, yFit, 'b--'); hold off;
-  end
-  if strcmpi(options.fitFunc, 'fma&pp')
-    legend([p1,p2], {'fma','pp'})
-  end
-
-  % Label axes and figures
-  xlabel('Electrode #')
-  ylabel('Phase (rad)')
-  tH = title([figTitle ', Freq: ' num2str(round(frequencies(f),1))], 'Interpreter','none');
-
-  % Print stats
-  str = ['r=' num2str(r(f)), ', p=' num2str(pval(f))];
-  yLim = ylim;
-  yAxisLength = yLim(2) - yLim(1);
-  text(xLim(1)+0.6*xAxisLength, yLim(1)+0.05*yAxisLength, str)
-
-  % Print significant unit counts
-  nonEmptyUnits = ~cellfun(@isempty,unitTimes);
-  unitCount = sum(nonEmptyUnits & options.include(:,f));
-  significantUnitCount = sum(~isnan(phase(nonEmptyUnits,f)) & ...
-    options.include(nonEmptyUnits,f));
-  str = ['n=' num2str(significantUnitCount), '/' num2str(unitCount)];
-  text(xLim(1)+0.05*xAxisLength, yLim(1)+0.95*yAxisLength, str)
-
-  % Print the line equation
-  if coefficients(f,2) >= 0
-    lineEqStr = [num2str(coefficients(f,1)) 'x+' num2str(coefficients(f,2))];
-  else
-    lineEqStr = [num2str(coefficients(f,1)) 'x' num2str(coefficients(f,2))];
-  end
-  text(xLim(1)+0.6*xAxisLength, yLim(1)+0.95*yAxisLength, lineEqStr)
-
-  % Save figures
-  if ~isempty(options.figPath)
-    if ~exist(options.figPath,'dir')
-      mkdir(options.figPath);
+    % Draw the fitted line
+    xLim = xlim;
+    xAxisLength = xLim(2) - xLim(1);
+    xAxisStep = xAxisLength/10000;
+    x = xLim(1):xAxisStep:xLim(2);
+    if strcmpi(options.fitFunc, 'fma') || strcmpi(options.fitFunc, 'fma&pp')
+      [~, slope, coefficients(f,:)] = fitLine(maxChan(options.include(:,f)), ...
+        phase(options.include(:,f),f), type='linear-circular-fma');
+      yFit = x.*slope + coefficients(f,2);
+      hold on; p1 = plot(x, yFit, 'k--'); hold off;
     end
-    filename = strrep(tH.String,' ','_');
-    filename = strrep(filename, ',','_');
-    filename = strrep(filename, '-','_');
-    filename = strrep(filename, ':','' );
-    filename = strrep(filename, '^','' );
-    filename = strrep(filename, '{','' );
-    filename = strrep(filename, '}','' );
-    filename = strrep(filename, '.','p');
-    filename = [options.figPath filesep filename '.fig']; %#ok<*AGROW> 
-    savefig(fH,filename,'compact');
+    if strcmpi(options.fitFunc, 'pp') || strcmpi(options.fitFunc, 'fma&pp')
+      [~, slope, coefficients(f,:)] = fitLine(maxChan(options.include(:,f)), ...
+        phase(options.include(:,f),f), type='linear-circular-pp');
+      yFit = x.*slope + coefficients(f,2);
+      hold on; p2 = plot(x, yFit, 'b--'); hold off;
+    end
+    if strcmpi(options.fitFunc, 'fma&pp')
+      legend([p1,p2], {'fma','pp'})
+    end
+
+    % Adjust the correlation direction based on the slope of the regression line
+    if slope < 0
+      r(f) = -abs(r(f));
+    end
+
+    % Label axes and figures
+    xlabel('Electrode #')
+    ylabel('Phase (rad)')
+    tH = title([figTitle ', Freq: ' num2str(round(frequencies(f),1))], 'Interpreter','none');
+
+    % Print stats
+    str = ['r=' num2str(r(f)), ', p=' num2str(pval(f))];
+    yLim = ylim;
+    yAxisLength = yLim(2) - yLim(1);
+    text(xLim(1)+0.6*xAxisLength, yLim(1)+0.05*yAxisLength, str)
+
+    % Print significant unit counts
+    nonEmptyUnits = ~cellfun(@isempty,unitTimes);
+    unitCount = sum(nonEmptyUnits & options.include(:,f));
+    significantUnitCount = sum(~isnan(phase(nonEmptyUnits,f)) & ...
+      options.include(nonEmptyUnits,f));
+    str = ['n=' num2str(significantUnitCount), '/' num2str(unitCount)];
+    text(xLim(1)+0.05*xAxisLength, yLim(1)+0.95*yAxisLength, str)
+
+    % Print the line equation
+    if coefficients(f,2) >= 0
+      lineEqStr = [num2str(coefficients(f,1)) 'x+' num2str(coefficients(f,2))];
+    else
+      lineEqStr = [num2str(coefficients(f,1)) 'x' num2str(coefficients(f,2))];
+    end
+    text(xLim(1)+0.6*xAxisLength, yLim(1)+0.95*yAxisLength, lineEqStr)
+
+    % Save figures
+    if ~isempty(options.figPath)
+      if ~exist(options.figPath,'dir')
+        mkdir(options.figPath);
+      end
+      filename = strrep(tH.String,' ','_');
+      filename = strrep(filename, ',','_');
+      filename = strrep(filename, '-','_');
+      filename = strrep(filename, ':','' );
+      filename = strrep(filename, '^','' );
+      filename = strrep(filename, '{','' );
+      filename = strrep(filename, '}','' );
+      filename = strrep(filename, '.','p');
+      filename = [options.figPath filesep filename '.fig']; %#ok<*AGROW>
+      savefig(fH,filename,'compact');
+    end
   end
 end

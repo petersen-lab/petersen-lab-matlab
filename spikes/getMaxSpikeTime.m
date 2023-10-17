@@ -16,7 +16,11 @@ function maxTime = getMaxSpikeTime(spikeTimes)
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
-  spikeTimes {mustBeVector}
+  spikeTimes
+end
+
+if numel(size(spikeTimes)) > 2 || (size(spikeTimes,1) > 1 && size(spikeTimes,2) > 1)
+  error('Value must be a 1-by-n vector or an n-by-1 vector.');
 end
 
 maxTime = max(spikeTimes);
