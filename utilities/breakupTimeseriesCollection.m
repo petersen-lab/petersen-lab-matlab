@@ -25,6 +25,10 @@ function timeseriesFileList = breakupTimeseriesCollection(file, options)
 %     Individual files follow CellExplorer timeseries format
 %     (https://cellexplorer.org/datastructure/data-structure-and-format/#time-series).
 %
+% Dependencies:
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

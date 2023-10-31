@@ -168,6 +168,16 @@ function [fullCoherence, thetaPhaseTopography, fullInterpCoherence, ...
 %   corner shows the fitted line equation. The bottom right corner shows
 %   the correlation coeffiecient and its significance p-value.
 %
+% Dependencies:
+%   CellExplorer (https://cellexplorer.org/).
+%   Circular Statistics Toolbox
+%     (https://uk.mathworks.com/matlabcentral/fileexchange/10676-circular-statistics-toolbox-directional-statistics).
+%   dervinism/circStatNP (https://github.com/dervinism/circStatNP).
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%   FMA Toolbox (https://github.com/michael-zugaro/FMAToolbox).
+%   Chronux Toolbox (http://chronux.org/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com)
 

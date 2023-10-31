@@ -21,6 +21,10 @@ function [resampledSpikes, spikeTimeBins, resampledSpikeTimes] = resampleSpikesA
 %   resampledSpikeTimes (numeric): a shape-(K, 1) numeric array of
 %     shape-(1, L) numeric arrays of resampled spike times.
 %
+% Dependencies:
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

@@ -19,6 +19,10 @@ function chSpikeTimes = getChannelSpikeTimes(spikeTimes, maxWaveformCh, nCh)
 %     corresponding to individual recording channels. Certain channels can
 %     be empty, if no spiking is associated with those channels.
 %
+% Dependencies:
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

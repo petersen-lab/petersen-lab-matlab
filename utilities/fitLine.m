@@ -40,6 +40,7 @@ function [yFit, slope, coefficients] = fitLine(x, y, options)
 %     TSE = norm(phi-circ_mean(phi))^2;
 %
 % Dependencies:
+%   CellExplorer (https://cellexplorer.org/).
 %   FMA Toolbox (https://github.com/michael-zugaro/FMAToolbox).
 %   Circular Statistics Toolbox (https://github.com/circstat/circstat-matlab).
 %   Code_Petersen_Buzsaki_Neuron_2020/CircularLinearRegression.m

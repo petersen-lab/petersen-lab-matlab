@@ -50,6 +50,15 @@ function [r, pval, coefficients] = thetaPhaseSpatialMap(phase, maxChan, frequenc
 %   rightcorner shows the correlation coeffiecient and its significance
 %   p-value.
 %
+% Dependencies:
+%   CellExplorer (https://cellexplorer.org/).
+%   Circular Statistics Toolbox
+%     (https://uk.mathworks.com/matlabcentral/fileexchange/10676-circular-statistics-toolbox-directional-statistics).
+%   dervinism/circStatNP (https://github.com/dervinism/circStatNP).
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%   FMA Toolbox (https://github.com/michael-zugaro/FMAToolbox).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com)
 

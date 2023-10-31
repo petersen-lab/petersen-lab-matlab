@@ -25,6 +25,10 @@ function paperSize = resizeFig(f, ax, width, height, label, margin, gap)
 %   paperSize (numeric): a shape-(1,2) numeric array with figure
 %     dimensions [width height].
 %
+% Dependencies:
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com)
 

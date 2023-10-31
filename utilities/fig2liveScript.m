@@ -32,6 +32,10 @@ function [figH, axes] = fig2liveScript(fig, options)
 %   axes (graphics): a shape-(1,1) graphics object containing the axes
 %     handle from the Live Script figure.
 %
+% Dependencies:
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

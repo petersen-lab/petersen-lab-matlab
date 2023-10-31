@@ -27,6 +27,8 @@ function [dataMean, dataCI95, counts] = datamean(data, meanType)
 % Dependencies:
 %   Circular Statistics Toolbox (https://github.com/circstat/circstat-matlab).
 %   Non-parametric circular statistics functions for Matlab (https://github.com/dervinism/circStatNP).
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com)
@@ -45,7 +47,7 @@ data(isinf(data)) = NaN;
 counts = sum(~isnan(data),1); % number of significant cells
 F = size(data, 2); % number of frequencies or time
 if counts == 1
-    dataMean = data;
+    dataMean = data(~isnan(data));
     return
 end
 

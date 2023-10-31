@@ -15,6 +15,7 @@ function contaminationPercentage = refractoryContamination(spikeTimes)
 %
 % Dependencies:
 %   CellExplorer (https://cellexplorer.org/).
+%   buzsakilab/buzcode (https://github.com/buzsakilab/buzcode).
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).

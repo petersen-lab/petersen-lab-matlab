@@ -19,6 +19,14 @@ function [binCounts, binLocs, totalCounts, phaseMeans] = phaseHistrogram(phase, 
 %   binLocs (numeric): a shape-(1, nBins) numeric array with phase
 %     histogram bin locations in radians.
 %
+% Dependencies
+%   
+%   Circular Statistics Toolbox
+%     (https://uk.mathworks.com/matlabcentral/fileexchange/10676-circular-statistics-toolbox-directional-statistics).
+%   dervinism/circStatNP (https://github.com/dervinism/circStatNP).
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

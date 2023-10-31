@@ -18,6 +18,10 @@ function overlappingIntervals = intervalOverlap(intervals1, intervals2)
 %     intervals selected from intervals1 so that they all overlap with any
 %     of the intervals in intervals2.
 %
+% Dependencies:
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

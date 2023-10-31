@@ -100,9 +100,12 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     function input parameters including the default values.
 %
 % Dependencies:
+%   CellExplorer (https://cellexplorer.org/).
+%   petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
 %   FMA Toolbox (https://github.com/michael-zugaro/FMAToolbox).
 %   Chronux Toolbox (http://chronux.org/).
-%   Both toolboxes are contained within buzcode/externalPackages
+%   The latter two toolboxes are contained within buzcode/externalPackages
 %     (https://github.com/buzsakilab/buzcode).
 %
 % Comments:

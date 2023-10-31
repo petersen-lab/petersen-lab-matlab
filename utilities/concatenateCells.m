@@ -27,15 +27,19 @@ nElements = numel(cellArray);
 concatenatedMatrix = cellArray{1};
 assert(isnumeric(concatenatedMatrix), 'Elements of the supplied cell array must be numeric.');
 for iElement = 2:nElements
-  assert(isnumeric(cellArray{iElement}), 'Elements of the supplied cell array must be numeric.');
-  if dimension == 1
-    assert(size(concatenatedMatrix,2) == size(cellArray{iElement},2), ...
-      'Elements in the supplied cell array have unequal number of columns');
-    concatenatedMatrix = [concatenatedMatrix; cellArray{iElement}]; %#ok<*AGROW> 
-  elseif dimension == 2
-    assert(size(concatenatedMatrix,1) == size(cellArray{iElement},1), ...
-      'Elements in the supplied cell array have unequal number of rows');
-    concatenatedMatrix = [concatenatedMatrix, cellArray{iElement}];
+  if isempty(concatenatedMatrix)
+    concatenatedMatrix = cellArray{iElement};
+  elseif ~isempty(cellArray{iElement})
+    assert(isnumeric(cellArray{iElement}), 'Elements of the supplied cell array must be numeric.');
+    if dimension == 1
+      assert(size(concatenatedMatrix,2) == size(cellArray{iElement},2), ...
+        'Elements in the supplied cell array have unequal number of columns');
+      concatenatedMatrix = [concatenatedMatrix; cellArray{iElement}]; %#ok<*AGROW>
+    elseif dimension == 2
+      assert(size(concatenatedMatrix,1) == size(cellArray{iElement},1), ...
+        'Elements in the supplied cell array have unequal number of rows');
+      concatenatedMatrix = [concatenatedMatrix, cellArray{iElement}];
+    end
   end
 end
 
