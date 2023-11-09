@@ -21,7 +21,7 @@ function timeseriesFileList = breakupTimeseriesCollection(file, options)
 %
 % Returns:
 %   timeseriesFileList (cell): a shape-(L, 1) cell array of MAT files
-%     containing individual timeseries from a breakup collection.
+%     containing individual timeseries vectors from a breakup collection.
 %     Individual files follow CellExplorer timeseries format
 %     (https://cellexplorer.org/datastructure/data-structure-and-format/#time-series).
 %

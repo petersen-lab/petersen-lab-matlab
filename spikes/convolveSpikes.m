@@ -4,10 +4,10 @@ function [spikesPresentation, timeBins, parameters] = convolveSpikes(spikeTimes,
 % Gaussian convolution of the spikes raster into continuous rates.
 %
 % Args:
-%   spikeTimes (cell, required, positional): a shape-(N, 1) cell array of
-%     numeric spike time arrays corresponding to individual units or probe
-%     recording channels or a single shape-(1, M) numeric array of spike
-%     times.
+%   spikeTimes (cell | numeric, required, positional): a shape-(N, 1) cell
+%     array of numeric spike time arrays corresponding to individual units
+%     or probe recording channels or a single shape-(1, M) numeric array of
+%     spike times.
 %   stepSize (numeric, optional, keyword): a shape-(1, 1) numeric scalar
 %     with the sampling interval for convolved continuous spike traces
 %     (default=0.002).
