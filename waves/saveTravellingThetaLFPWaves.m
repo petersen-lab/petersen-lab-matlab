@@ -1,19 +1,18 @@
-function [travellingWaveCollectionFile, travellingWaveTimeseriesFiles] = saveTravellingThetaChannelWaves(dataFile, options)
-% [travellingWaveCollectionFile, travellingWaveTimeseriesFiles] = saveTravellingThetaChannelWaves(dataFile, options)
+function [travellingWaveCollectionFile, travellingWaveTimeseriesFiles] = saveTravellingThetaLFPWaves(dataFile, options)
+% [travellingWaveCollectionFile, travellingWaveTimeseriesFiles] = saveTravellingThetaLFPWaves(dataFile, options)
 %
-% Function detects travelling recording channel spiking waves, their
-% direction, and saves this data in accordance with the CellExplorer
-% format. It's a wrapper for detectTravellingChannelWaves function that
-% enables it to work with the CellExplorer format (see
-% detectTravellingChannelWaves for more info).
+% Function detects travelling recording channel LFP waves, their direction,
+% and saves this data in accordance with the CellExplorer format. It's a
+% wrapper for detectTravellingLFPWaves function that enables it to work
+% with the CellExplorer format (see detectTravellingLFPWaves for more info).
 %
 % Args:
 %   dataFile (char, required, positional): a shape-(P, 1) character array
-%     with the full path and a basename of the data file in the form:
-%     <path-to-data-folder>\<basename>.*.mat.
+%     with the full path and a basename of the LFP file in the form:
+%     <path-to-data-folder>\<basename>.lfp.
 %   samplingInterval (numeric, optional, keyword): a shape-(1, 1) sampling
-%     interval for producing convolved spike times series and oscillation
-%     score calculations (default=0.002).
+%     interval for downsampling LFP signal and calculating the oscillation
+%     score (default=0.002).
 %   channelOrder (numeric, optional, keyword): a shape-(1, M) numeric array
 %     for re-ordering recording channels. By default, no re-ordering is
 %     carried out.
@@ -22,7 +21,7 @@ function [travellingWaveCollectionFile, travellingWaveTimeseriesFiles] = saveTra
 %     channels are included.
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array
 %     defining frequency range over which to calculate the oscillation
-%     score and filter data (default=[4 11]);
+%     score (default=[4 11]);
 %   axis (char, optional, keyword): a shape-(1, K) character array
 %     indicating axes along which to calculate the travelling wave
 %     direction. The following three options are available:
@@ -33,41 +32,20 @@ function [travellingWaveCollectionFile, travellingWaveTimeseriesFiles] = saveTra
 %     flag to indicate whether empty electrode rows and columns containing
 %     only NaNs should be ommited from travelling wave calculations
 %     (default=true).
-%   firingRateTh (numeric, optional, keyword): a shape-(1, 1) numeric
-%     scalar firing rate threshold for excluding recording channels with
-%     the firing rate below this value in Hz (default=0)
-%   oscillationTh (numeric | struct, optional, keyword): a shape-(1, 1)
-%     numeric scalar representing oscillation score threshold for excluding
+%   oscillationTh (numeric, optional, keyword): a shape-(1, 1) numeric
+%     scalar representing oscillation score threshold for excluding
 %     channels with the score that is equal or below this value
-%     (default=0). If left empty, shuffling procedure is used to work out a
-%     significant oscillation score threshold. Alternatively, one can
-%     supply a shape-(1, 1) structure scalar specifying the parameters of
-%     the random number generator to be used for data shuffling (guarantees
-%     reproducibility). The structure should have fields 'Type' and 'Seed'
-%     which specify the type of the random number generator and the numeric
-%     seed. For more information, check the documentation of the Matlab's
-%     rng function.
-%   pgdTh (numeric | struct, optional, keyword): a shape-(1, 1) numeric
-%     scalar setting the phase gradient directionality index significance
+%     (default=0).
+%   pgdTh (numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     setting the phase gradient directionality index significance
 %     threshold (default=0). If left empty, the threshold is estimated
-%     based on random data shuffling. Alternatively, one can supply a
-%     shape-(1, 1) structure scalar specifying the parameters of the random
-%     number generator to be used for data shuffling (guarantees
-%     reproducibility). The structure should have fields 'Type' and 'Seed'
-%     which specify the type of the random number generator and the numeric
-%     seed. For more information, check the documentation of the Matlab's
-%     rng function.
-%   envTh (numeric | struct, optional, keyword): a shape-(1, 1) numeric
-%     scalar setting the oscillation envelope significance threshold
-%     (default=0). The threshold allows determining oscillatory periods in
-%     the population firing rate. If left empty, the threshold is estimated
-%     based on randomly generated population firing rate. Alternatively,
-%     one can supply a shape-(1, 1) structure scalar specifying the
-%     parameters of the random number generator to be used for population
-%     firing rate generation (guarantees reproducibility). The structure
-%     should have fields 'Type' and 'Seed' which specify the type of the
-%     random number generator and the numeric seed. For more information,
-%     check the documentation of the Matlab's rng function.
+%     based on a one-tailed 95% confidence interval above the mean.
+%   envTh (numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     setting the oscillation envelope significance threshold (default=0).
+%     The threshold allows determining oscillatory periods in the
+%     population firing rate. If left empty, the threshold is estimated
+%     based on the mean envelope across all recording channels and a
+%     one-tailed 95% confidence interval above the mean.
 %   verbose (logical, optional, keyword): a shape-(1, 1) logical scalar
 %     controlling whether the function should produce processing reports
 %     (default=false);
@@ -102,14 +80,13 @@ arguments
   options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 11]
   options.axis (1,:) {mustBeMember(options.axis,{'all','vertical','horizontal'})} = 'all'
   options.omitnans (1,1) {islogical} = true
-  options.firingRateTh (1,1) {mustBeNumeric,mustBeNonnegative} = 0
-  options.oscillationTh (:,:) {mustBeNumericOrListedType(options.oscillationTh,'struct')} = 0
-  options.pgdTh (:,:) {mustBeNumericOrListedType(options.pgdTh,'struct')} = 0
-  options.envTh (:,:) {mustBeNumericOrListedType(options.envTh,'struct')} = 0
+  options.oscillationTh (1,1) {mustBeNumeric,mustBeNonnegative} = 0
+  options.pgdTh (:,:) {mustBeNumeric} = 0
+  options.envTh (:,:) {mustBeNumeric} = 0
   options.verbose (1,1) {islogical} = false
 end
 
-% Load spiking data
+% Load and downsample LFP data
 spikesFile = strrep(dataFile, '*', 'spikes.cellinfo');
 if ~exist(spikesFile, 'file')
   if options.verbose
@@ -172,7 +149,7 @@ end
 if options.verbose
   disp('   Saving data...')
 end
-travellingThetaWave2save.data = [travellingThetaWave.phaseGradDir; ...
+travellingThetaWave.data = [travellingThetaWave.phaseGradDir; ...
   travellingThetaWave.shuffledPhaseGradDir; ...
   travellingThetaWave.centreWeightedWaveDir; ...
   travellingThetaWave.waveSpeed; travellingThetaWave.wavelength; ...
@@ -182,20 +159,20 @@ travellingThetaWave2save.data = [travellingThetaWave.phaseGradDir; ...
   travellingThetaWave.travellingWaveLocs; ...
   travellingThetaWave.travellingWaveCycleLocs; ...
   travellingThetaWave.cycleNumbers]';
-travellingThetaWave2save.timestamps = travellingThetaWave.timestamps';
-travellingThetaWave2save.precision = class(travellingThetaWave.phaseGradDir);
-travellingThetaWave2save.units = {'a.u.', 'a.u.', 'rad', 'm/s', 'm', ...
+travellingThetaWave.timestamps = travellingThetaWave.timestamps';
+travellingThetaWave.precision = class(travellingThetaWave.phaseGradDir);
+travellingThetaWave.units = {'a.u.', 'a.u.', 'rad', 'm/s', 'm', ...
   'rad', 'rad', 'a.u.', 'a.u.', 'bool', 'bool', '#'};
-travellingThetaWave2save.nChannels = size(travellingThetaWave2save.data,2);
-travellingThetaWave2save.channelNames = {'pgdIndex_theta', ...
+travellingThetaWave.nChannels = size(travellingThetaWave.data,2);
+travellingThetaWave.channelNames = {'pgdIndex_theta', ...
   'pgdIndexShuffled_theta', 'centreWaveDir_theta', 'waveSpeed_theta', ...
   'wavelength_theta', 'netWaveDir_theta', 'netWaveDirShuffled_theta', ...
   'oscillationEnvelope_theta', 'oscillationEnvelopeRandom_theta', ...
   'travellingWaveLocs_theta', 'travellingWaveCycleLocs_theta', ...
   'cycleNumbers_theta'};
-travellingThetaWave2save.sr = round(1/params.samplingInterval);
-travellingThetaWave2save.nSamples = numel(travellingThetaWave.phaseGradDir);
-travellingThetaWave2save.description = [ ...
+travellingThetaWave.sr = round(1/params.samplingInterval);
+travellingThetaWave.nSamples = numel(travellingThetaWave.phaseGradDir);
+travellingThetaWave.description = [ ...
   'The 1st data column contains travelling theta (4-11 Hz) wave phase gradient directionality index as described in Zabeh et al., Nat Commun. ' ...
   'Rows correspond to timestamps which are downsampled compared to the original data. ' ...
   'The 2nd data column is the same as the 1st one but for shuffled data. ' ...
@@ -209,14 +186,13 @@ travellingThetaWave2save.description = [ ...
   'The 10th data column marks detected phase gradient locations. ' ...
   'The 11th data column marks theta travelling waves in full cycles. ' ...
   'The 12th data column marks theta cycle order number as detected by the Hilbert transform.'];
-travellingThetaWave2save.processingInfo.params = params;
-travellingThetaWave2save.processingInfo.function = [ ...
+travellingThetaWave.processingInfo.params = params;
+travellingThetaWave.processingInfo.function = [ ...
   'petersen-lab/petersen-lab-matlab/waves/detectTravellingChannelWaves (https://github.com/petersen-lab/petersen-lab-matlab); ' ...
   'erfanzabeh/WaveMonk/GradientMethod (https://github.com/erfanzabeh/WaveMonk)'];
-travellingThetaWave2save.processingInfo.date = datetime;
-travellingThetaWave2save.processingInfo.username = getenv('username');
-travellingThetaWave2save.processingInfo.hostname = getenv('computername');
-travellingThetaWave = travellingThetaWave2save;
+travellingThetaWave.processingInfo.date = datetime;
+travellingThetaWave.processingInfo.username = getenv('username');
+travellingThetaWave.processingInfo.hostname = getenv('computername');
 travellingWaveCollectionFile = strrep(dataFile, '*', 'travelingThetaWave.timeseriesCollection');
 save(travellingWaveCollectionFile, 'travellingThetaWave', '-v7.3');
 % Individual timeseries

@@ -1,9 +1,9 @@
 function [travellingThetaWave, options] = detectTravellingChannelWaves(chSpikeTimes, xcoords, ycoords, options)
 % [travellingThetaWave, options] = detectTravellingChannelWaves(chSpikeTimes, xcoords, ycoords, <options>)
 %
-% Function detects travelling recording channel waves and their direction
-% across spiking channels. To detect travelling waves across LFP channels,
-% use petersen-lab-matlab/waves/detectTravellingLFPWaves function.
+% Function detects travelling recording channel spiking waves and their
+% direction across spiking channels. To detect travelling waves across LFP
+% channels, use petersen-lab-matlab/waves/detectTravellingLFPWaves function.
 %
 % Args:
 %   chSpikeTimes (cell, required, positional): a shape-(M, 1) cell array of
@@ -24,7 +24,7 @@ function [travellingThetaWave, options] = detectTravellingChannelWaves(chSpikeTi
 %     channels are included.
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array
 %     defining frequency range over which to calculate the oscillation
-%     score (default=[4 11]);
+%     score and filter data (default=[4 11]);
 %   axis (char, optional, keyword): a shape-(1, K) character array
 %     indicating axes along which to calculate the travelling wave
 %     direction. The following three options are available:
@@ -391,13 +391,13 @@ end
 
 % Calculate theta phase
 hilbert1 = hilbert(filtConvChSpikeTimes'); % Apply Hilbert transform
-chSpikeTimesPhase = atan2(imag(hilbert1), real(hilbert1))' + pi/2; % Add pi/2 to start/end phase cycle at the trough of the sinusoid
+chSpikeTimesPhase = atan2(imag(hilbert1), real(hilbert1))';
 if isempty(options.pgdTh) || isstruct(options.pgdTh)
   hilbert1 = hilbert(filtConvRandChSpikeTimes');
-  randChSpikeTimesPhase = atan2(imag(hilbert1), real(hilbert1))' + pi/2;
+  randChSpikeTimesPhase = atan2(imag(hilbert1), real(hilbert1))';
 end
 hilbert1 = hilbert(filtPopulationRate');
-filtPopulationRatePhase = atan2(imag(hilbert1), real(hilbert1))' + pi/2;
+filtPopulationRatePhase = atan2(imag(hilbert1), real(hilbert1))';
 filtPopulationRatePhaseUnwrapped = unwrap(filtPopulationRatePhase);
 populationRateOscEnvelope = abs(hilbert1)';
 if isempty(options.envTh) || isstruct(options.envTh)
@@ -483,9 +483,8 @@ else
 end
 
 % Detect travelling waves
-cycleNumbers = ceil((filtPopulationRatePhaseUnwrapped + ...
-  abs(min(filtPopulationRatePhaseUnwrapped)))/(2*pi));
-cycleNumbers(1) = 1;
+cycleNumbers = ceil((filtPopulationRatePhaseUnwrapped+pi)./(2*pi));
+cycleNumbers(cycleNumbers == 0) = 1;
 oscCycleLocs = populationRateOscEnvelope>options.envTh;
 oscCycleCount = numel(unique(cycleNumbers(oscCycleLocs)));
 travellingWaveLocs = phaseGradDir>pgdSignificanceCutoff & ...
