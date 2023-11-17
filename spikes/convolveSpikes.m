@@ -16,6 +16,8 @@ function [spikesPresentation, timeBins, parameters] = convolveSpikes(spikeTimes,
 %     default=50).
 %   startTime (numeric, optional, keyword): a shape-(1, 1) numeric scalar
 %     with the start time bin (default = stepSize).
+%   endTime (numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     with the end time bin (default = last spike time).
 %
 % Returns:
 %   spikesPresentation (numeric): a shape-(N, M) numeric array of convolved
@@ -45,7 +47,8 @@ arguments
   spikeTimes (:,:) {mustBeNumericOrListedType(spikeTimes,'cell')}
   options.stepSize (1,1) {mustBeNumeric,mustBePositive} = 0.002
   options.convolutionPoints (1,1) {mustBeNumeric,mustBePositive} = 50
-  options.startTime = []
+  options.startTime (:,:) {mustBeNumeric,mustBeScalarOrEmpty} = []
+  options.endTime (:,:) {mustBeNumeric,mustBeScalarOrEmpty} = []
 end
 
 % Parse input
@@ -58,17 +61,21 @@ end
 
 % Find data limits
 nDataRows = numel(spikeTimes);
-endTime = ceil(max(cellfun(@(x) getMaxSpikeTime(x), spikeTimes)));
+if isempty(options.endTime)
+  options.endTime = ceil(max(cellfun(@(x) getMaxSpikeTime(x), spikeTimes)));
+else
+  assert(options.endTime >= max(cellfun(@(x) getMaxSpikeTime(x), spikeTimes)));
+end
 
 % Generate continuous representation of raster actvity
-timeBins = max([1 floor(options.startTime/options.stepSize)])*options.stepSize:options.stepSize:endTime;
+timeBins = max([1 floor(options.startTime/options.stepSize)])*options.stepSize:options.stepSize:options.endTime+options.stepSize;
 spikesPresentation = zeros(numel(spikeTimes), numel(timeBins));
 
 for row = 1:nDataRows
   if isempty(spikeTimes{row})
     spikesPresentation(row,:) = nan(size(timeBins));
   else
-    idx = round(spikeTimes{row}/options.stepSize) - timeBins(1)/options.stepSize + 1; % Assign bin indices to spikes
+    idx = ceil(spikeTimes{row}/options.stepSize) - timeBins(1)/options.stepSize + 1; % Assign bin indices to spikes
     idx(idx == 0) = 1;
     [spkCounts,idx] = groupcounts(idx(:)); % Count spikes within bin indices
     spikesPresentation(row,idx) = spkCounts; % Mark spike presentations
@@ -78,8 +85,10 @@ for row = 1:nDataRows
       gausswin(options.convolutionPoints)'/sum(gausswin(options.convolutionPoints)),'edge');
   end
 end
+assert(numel(timeBins) == size(spikesPresentation,2));
 
 % List processing paprameters
 parameters.stepSize = options.stepSize;
 parameters.convolutionPoints = options.convolutionPoints;
 parameters.startTime = options.startTime;
+parameters.endTime = options.endTime;

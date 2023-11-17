@@ -1,21 +1,22 @@
-function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, xcoords, ycoords, options)
-% [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, xcoords, ycoords, <options>)
+function [travellingWave, options] = detectTravellingLFPWaves(lfp, xcoords, ycoords, options)
+% [travellingWave, options] = detectTravellingLFPWaves(lfp, xcoords, ycoords, <options>)
 %
-% Function detects travelling recording channel spiking waves and their
+% Function detects travelling recording channel LFP waves and their
 % direction across spiking channels. To detect travelling waves across LFP
 % channels, use petersen-lab-matlab/waves/detectTravellingLFPWaves function.
 %
 % Args:
-%   chSpikeTimes (cell, required, positional): a shape-(M, 1) cell array of
-%     numeric spike time vectors for individual recording channels on the
-%     silicon probe.
+%   lfp (numeric, required, positional): a shape-(M, N) numeric array of
+%     LFP timeseries for individual recording channels on the silicon
+%     probe. Rows correspond to individual timeseries.
 %   xcoords (numeric, required, positional): a shape-(1, M) numeric array
 %     x-axis coordinates of recording channels.
 %   ycoords (numeric, required, positional): a shape-(1, M) numeric array
 %     y-axis coordinates of recording channels.
+%   lfpSamplingInterval (numeric, optional, keyword): a shape-(1, 1) LFP
+%     sampling interval (default=0.0004).
 %   samplingInterval (numeric, optional, keyword): a shape-(1, 1) sampling
-%     interval for producing convolved spike times series and oscillation
-%     score calculations (default=0.002).
+%     interval for downsampling the LFP signal (default=0.002).
 %   channelOrder (numeric, optional, keyword): a shape-(1, M) numeric array
 %     for re-ordering recording channels. By default, no re-ordering is
 %     carried out.
@@ -35,20 +36,9 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %     flag to indicate whether empty electrode rows and columns containing
 %     only NaNs should be ommited from travelling wave calculations
 %     (default=true).
-%   firingRateTh (numeric, optional, keyword): a shape-(1, 1) numeric
-%     scalar firing rate threshold for excluding recording channels with
-%     the firing rate below this value in Hz (default=0)
-%   oscillationTh (numeric | struct, optional, keyword): a shape-(1, 1)
-%     numeric scalar representing oscillation score threshold for excluding
-%     channels with the score that is equal or below this value
-%     (default=0). If left empty, shuffling procedure is used to work out a
-%     significant oscillation score threshold. Alternatively, one can
-%     supply a shape-(1, 1) structure scalar specifying the parameters of
-%     the random number generator to be used for data shuffling (guarantees
-%     reproducibility). The structure should have fields 'Type' and 'Seed'
-%     which specify the type of the random number generator and the numeric
-%     seed. For more information, check the documentation of the Matlab's
-%     rng function.
+%   oscillationTh (logical, optional, keyword): a shape-(1, 1) logical
+%     scalar setting whether to exclude non-oscillatory channels (true) or
+%     include all channels (false; default).
 %   electrodePattern (char, optional, keyword): a shape-(1, L) character
 %     array representing probe electrode pattern. Currently only two types
 %     of patterns are defined:
@@ -69,20 +59,26 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %   envTh (numeric | struct, optional, keyword): a shape-(1, 1) numeric
 %     scalar setting the oscillation envelope significance threshold
 %     (default=0). The threshold allows determining oscillatory periods in
-%     the population firing rate. If left empty, the threshold is estimated
-%     based on randomly generated population firing rate. Alternatively,
-%     one can supply a shape-(1, 1) structure scalar specifying the
-%     parameters of the random number generator to be used for population
-%     firing rate generation (guarantees reproducibility). The structure
-%     should have fields 'Type' and 'Seed' which specify the type of the
-%     random number generator and the numeric seed. For more information,
-%     check the documentation of the Matlab's rng function.
+%     the LFP data. If left empty, the threshold is estimated based on
+%     random data shuffling. Alternatively, one can supply a shape-(1, 1)
+%     structure scalar specifying the parameters of the random number
+%     generator to be used for data shuffling (guarantees reproducibility).
+%     The structure should have fields 'Type' and 'Seed' which specify the
+%     type of the random number generator and the numeric seed. For more
+%     information, check the documentation of the Matlab's rng function.
+%   cycleDemarcationMethod (char, optional, keyword): a shape-(1, F)
+%     character array determining the method of oscillation cycle
+%     demarcation. The following two methods are available:
+%     'medianCh' - a median of oscillatory cycles across all LFP channels
+%                  (default).
+%     'maxPowerCh' - oscillatory cycles of the most oscillatory LFP
+%                    recording channel only.
 %   verbose (logical, optional, keyword): a shape-(1, 1) logical scalar
 %     controlling whether the function should produce processing reports
 %     (default=false);
 %
 % Returns:
-%   travellingThetaWave (struct): a shape(1, 1) scalar structure with the
+%   travellingWave (struct): a shape(1, 1) scalar structure with the
 %     following fields (output of the WaveMonk/GradientMethod function):
 %     phaseGradDir (numeric): a shape-(1, J) numeric array with phase
 %       gradient directionality (PGD) index values. PGD varries between 0
@@ -90,7 +86,7 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %       number of samples in this vector is determined by the
 %       samplingInterval input variable.
 %     shuffledPhaseGradDir (numeric): a shape-(1, J) numeric array with PGD
-%       index values based on shuffled spike times data.
+%       index values based on shuffled LFP data.
 %     centreWeightedWaveDir (numeric): a shape-(1, J) numeric array with
 %       centre-weighted travelling wave direction in radians (direction at
 %       the centre of the electrode; see WaveMonk/GradientMethod). Positive
@@ -110,33 +106,32 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %       a spread in the dorsoventral direction.
 %     shuffledNetWaveDir (numeric): a shape-(1, J) numeric array containing
 %       travelling wave direction in radians calculated based on the
-%       shuffled spike times.
-%     populationRateOscEnvelope (numeric): a shape-(1, J) numeric array of
-%       Hilbert transform envelope of the population firing rate band-pass
-%       filtered at the frequency range set by the freqRange parameter.
-%     randPopulationRateOscEnvelope (numeric): a shape-(1, J) numeric array
-%       of Hilbert transform envelope of the pseudorandomly generated
-%       population firing rate band-pass filtered at the frequency range
-%       set by the freqRange parameter.
+%       shuffled LFP data.
+%     lfpOscEnvelope (numeric): a shape-(1, J) numeric array of the average
+%       Hilbert transform envelope of the band-pass (freqRange) filtered
+%       LFP traces.
+%     shuffledLFPOscEnvelope (numeric): a shape-(1, J) numeric array of the
+%       average Hilbert transform envelope of the band-pass (freqRange)
+%       filtered shuffled LFP traces.
 %     travellingWaveLocs (logical): a shape-(1, J) logical array marking
 %       locations where the phase gradient directionality index exceeds
-%       pgdTh threshold and also the population firing rate is oscillatory
-%       as indicated by populationRateOscEnvelope exceeding the envTh
-%       parameter.
+%       pgdTh threshold and also the LFP signal is oscillatory as indicated
+%       by lfpOscEnvelope exceeding the envTh parameter.
 %     travellingWaveCycleLocs (logical): a shape-(1, J) logical array
 %       marking full oscillation cycles containing travelling waves as
 %       marked by travellingWaveLocs.
 %     cycleNumbers (numeric): a shape-(1, J) numeric array of data sample
 %       labels in terms of successive oscillation cycles (cycle order
-%       number).
+%       number). Cycles are determined based either on the most oscillatory
+%       LFP channel or either on the median cycle of all LFP channels
+%       (default).
 %     timestamps (numeric): a shape-(1, J) numeric array of timestamps
 %       corresponding to data samples in the above output vectors.
 %     shuffledPGDHist (numeric): a shape-(2, I) numeric array with PGD bins
-%       (1st row) and PGD counts (2nd row) based on shuffled spike times
-%       data.
-%     randEnvelopeHist (numeric): a shape-(2, H) numeric array with
+%       (1st row) and PGD counts (2nd row) based on the shuffled LFP data.
+%     shuffledEnvelopeHist (numeric): a shape-(2, H) numeric array with
 %       Hilbert transform envelope bins (1st row) and the corresponding
-%       counts (2nd row) for randomly generated population firing rate.
+%       counts (2nd row) for shuffled LFP data.
 %     netWaveDirHist (numeric): a shape-(2, G) numeric array with estimated
 %       electrode channel net spiking phase gradient direction bins (1st
 %       row) and the corresponding counts (2nd row). This is the histogram
@@ -145,17 +140,17 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %       estimated travelling wave-only direction bins (1st row) and the
 %       corresponding counts (2nd row).
 %     nontravellingWaveDirHist (numeric): a shape-(2, G) numeric array with
-%       bins over estimated electrode channel net spiking phase gradient
+%       bins over estimated electrode channel net LFP phase gradient
 %       direction outside detected travelling waves (1st row) and the
 %       corresponding counts (2nd row). the sum of travellingWaveDirHist
 %       and nontravellingWaveDirHist counts should equal netWaveDirHist
 %       count.
 %     shuffledNetWaveDirHist (numeric): same as netWaveDirHist but for the
-%       shuffled spike times data.
+%       shuffled LFP data.
 %     shuffledTravellingWaveDirHist (numeric): same as
-%       travellingWaveDirHist but for the shuffled spike times data.
+%       travellingWaveDirHist but for the shuffled LFP data.
 %     shuffledNontravellingWaveDirHist (numeric): same as
-%       nontravellingWaveDirHist but for the shuffled spike times data.
+%       nontravellingWaveDirHist but for the shuffled LFP data.
 %     travellingWaveCount (numeric): a shape-(1, 1) numeric scalar of the
 %       total count of travelling waves within freqRange.
 %     proportionPerOscCycle (numeric): a shape-(1, 1) numeric scalar with
@@ -166,19 +161,17 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %   options (struct): a shape-(1, 1) structure scalar containing all
 %     optional input parameters. There is also one extra field 'rngs'
 %     containing random number generator parameters ('Type' and 'Seed')
-%     used to shuffle spiking data to estimate the significance threshold
-%     for channel oscillation scores ('oscillationTh'), to shuffle spiking
-%     data to estimate the significance threshold of the PGD index
-%     ('pgdTh') and to generate the random population firing rate for
-%     estimating the Hilbert transform envelope significance threshold
-%     ('envTh'). This info is useful if you want to replicate the
-%     travelling wave detection results.
+%     used to shuffle LFP data to estimate the significance threshold of
+%     the PGD index ('pgdTh') as well as to estimate the Hilbert transform
+%     envelope significance threshold ('envTh') for the shuffled LFP data.
+%     If both thresholds were estimated based on shuffled data, their
+%     random number generator parameters should be the same. This info is
+%     useful if you want to replicate the travelling wave detection results.
 %
 % Dependencies
 %   CellExplorer (https://cellexplorer.org/)
 %   petersen-lab/petersen-lab-matlab
 %     (https://github.com/petersen-lab/petersen-lab-matlab/).
-%   The Oscillation Score (https://www.raulmuresan.ro/sources/oscore/).
 %   erfanzabeh/WaveMonk (https://github.com/erfanzabeh/WaveMonk).
 %   Circular Statistics Toolbox
 %     (https://uk.mathworks.com/matlabcentral/fileexchange/10676-circular-statistics-toolbox-directional-statistics).
@@ -187,92 +180,71 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
-  chSpikeTimes (:,1) {mustBeA(chSpikeTimes,'cell'),mustBeVector}
+  lfp (:,:) {mustBeNumeric}
   xcoords (1,:) {mustBeNumeric,mustBeVector}
   ycoords (1,:) {mustBeNumeric,mustBeVector}
+  options.lfpSamplingInterval (1,1) {mustBePositive} = 0.0004
   options.samplingInterval (1,1) {mustBePositive} = 0.002
   options.channelOrder (1,:) {mustBePositive,mustBeVector} = 1:numel(xcoords)
   options.channelsOI (1,:) {mustBePositive,mustBeVector} = 1:numel(xcoords)
   options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 11]
   options.axis (1,:) {mustBeMember(options.axis,{'all','vertical','horizontal'})} = 'all'
   options.omitnans (1,1) {islogical} = true
-  options.firingRateTh (1,1) {mustBeNumeric,mustBeNonnegative} = 0
-  options.oscillationTh (:,:) {mustBeNumericOrListedType(options.oscillationTh,'struct')} = 0
+  options.oscillationTh (1,1) {islogical} = false
   options.electrodePattern (1,:) {mustBeMember(options.electrodePattern,{'linear','checkerboard'})} = 'linear'
   options.pgdTh (:,:) {mustBeNumericOrListedType(options.pgdTh,'struct')} = 0
   options.envTh (:,:) {mustBeNumericOrListedType(options.envTh,'struct')} = 0
+  options.cycleDemarcationMethod (1,:) {mustBeMember(options.cycleDemarcationMethod,{'medianCh','maxPowerCh'})} = 'medianCh'
   options.verbose (1,1) {islogical} = false
 end
 
-% Re-order channels
-chSpikeTimes = chSpikeTimes(options.channelOrder);
-
-% Get population firing rate
-populationRate = sort(concatenateCells(chSpikeTimes(options.channelsOI)));
-
-% Threshold channels based on their firing rates
-emptyChSpikeTimes = cellfun('isempty', chSpikeTimes);
-lastSpikeTime = max(cellfun(@max, chSpikeTimes(~emptyChSpikeTimes)));
-chFiringRates = zeros(size(emptyChSpikeTimes));
-chFiringRates(~emptyChSpikeTimes) = cellfun(@(x) numel(x)/lastSpikeTime, chSpikeTimes(~emptyChSpikeTimes));
-highFiringChannels = find(chFiringRates >= options.firingRateTh);
-channelsOI = options.channelsOI(ismember(options.channelsOI, highFiringChannels));
-if numel(channelsOI) < 2
-  warning('Too few high firing channels to perform travelling wave detection. Terminating function call.');
-  travellingWave.phaseGradDir = []; travellingWave.shuffledPhaseGradDir = [];
-  travellingWave.centreWeightedWaveDir = []; travellingWave.waveSpeed = [];
-  travellingWave.wavelength = []; travellingWave.netWaveDir = [];
-  travellingWave.shuffledNetWaveDir = []; travellingWave.populationRateOscEnvelope = [];
-  travellingWave.randPopulationRateOscEnvelope = []; travellingWave.travellingWaveLocs = [];
-  travellingWave.travellingWaveCycleLocs = []; travellingWave.cycleNumbers = [];
-  travellingWave.timestamps = []; travellingWave.shuffledPGDHist = [];
-  travellingWave.randEnvelopeHist = []; travellingWave.netWaveDirHist = [];
-  travellingWave.travellingWaveDirHist = []; travellingWave.nontravellingWaveDirHist = [];
-  travellingWave.shuffledNetWaveDirHist = []; travellingWave.shuffledTravellingWaveDirHist = [];
-  travellingWave.shuffledNontravellingWaveDirHist = []; travellingWave.travellingWaveCount = [];
-  travellingWave.proportionPerOscCycle = []; travellingWave.incidence = [];
-  options.rngs.oscillationTh = []; options.rngs.pgdTh = []; options.rngs.envTh = [];
-  return
+% Parse input
+if isstruct(options.pgdTh) && isstruct(options.envTh)
+  assert(all(isfield(options.pgdTh,{'Type','Seed'})))
+  assert(all(isfield(options.envTh,{'Type','Seed'})))
+  assert(strcmpi(options.pgdTh.Type,options.envTh.Type))
+  assert(options.pgdTh.Seed == options.envTh.Seed)
 end
+
+% Downsample LFP traces
+originalTimestamps = (1:size(lfp,2))*options.lfpSamplingInterval;
+downsampledTimestamps = options.samplingInterval:options.samplingInterval:originalTimestamps(end);
+lfp = interp1(originalTimestamps, single(lfp'), downsampledTimestamps)';
+
+% Re-order channels
+lfp = lfp(options.channelOrder,:);
 
 % Threshold channels based on their oscillation scores
-if isempty(options.oscillationTh)
-  [oscScore, ~, ~, ~, ~, options.oscillationTh, oscScoreParams] = multiOscScore( ...
-    chSpikeTimes, freqRange=options.freqRange, ...
-    sr=round(1/options.samplingInterval), shuffle=true);
-elseif isstruct(options.oscillationTh)
-  [oscScore, ~, ~, ~, ~, options.oscillationTh, oscScoreParams] = multiOscScore( ...
-    chSpikeTimes, freqRange=options.freqRange, ...
-    sr=round(1/options.samplingInterval), shuffle=options.oscillationTh);
-else
-  [oscScore, ~, ~, ~, ~, ~, oscScoreParams] = multiOscScore(chSpikeTimes, ...
-    freqRange=options.freqRange, sr=round(1/options.samplingInterval));
+if options.oscillationTh
+  oscillatingChannels = detectLFPOsc(lfp, options.freqRange, ...
+    samplingFreq=1/options.samplingInterval);
+  oscillatingChannels = find(oscillatingChannels);
+  options.channelsOI = options.channelsOI(ismember(options.channelsOI, ...
+    oscillatingChannels));
 end
-options.rngs.oscillationTh = oscScoreParams.shuffle;
-oscillatingChannels = find(oscScore > options.oscillationTh);
-channelsOI = channelsOI(ismember(channelsOI, oscillatingChannels));
-if numel(channelsOI) < 2
+if numel(options.channelsOI) < 2
   warning('Too few oscillating channels to perform travelling wave detection. Terminating function call.');
   travellingWave.phaseGradDir = []; travellingWave.shuffledPhaseGradDir = [];
   travellingWave.centreWeightedWaveDir = []; travellingWave.waveSpeed = [];
   travellingWave.wavelength = []; travellingWave.netWaveDir = [];
-  travellingWave.shuffledNetWaveDir = []; travellingWave.populationRateOscEnvelope = [];
-  travellingWave.randPopulationRateOscEnvelope = []; travellingWave.travellingWaveLocs = [];
+  travellingWave.shuffledNetWaveDir = []; travellingWave.lfpOscEnvelope = [];
+  travellingWave.shuffledLFPOscEnvelope = []; travellingWave.travellingWaveLocs = [];
   travellingWave.travellingWaveCycleLocs = []; travellingWave.cycleNumbers = [];
   travellingWave.timestamps = []; travellingWave.shuffledPGDHist = [];
-  travellingWave.randEnvelopeHist = []; travellingWave.netWaveDirHist = [];
+  travellingWave.shuffledEnvelopeHist = []; travellingWave.netWaveDirHist = [];
   travellingWave.travellingWaveDirHist = []; travellingWave.nontravellingWaveDirHist = [];
   travellingWave.shuffledNetWaveDirHist = []; travellingWave.shuffledTravellingWaveDirHist = [];
   travellingWave.shuffledNontravellingWaveDirHist = []; travellingWave.travellingWaveCount = [];
   travellingWave.proportionPerOscCycle = []; travellingWave.incidence = [];
-  options.rngs.oscillationTh = []; options.rngs.pgdTh = []; options.rngs.envTh = [];
+  options.rngs.pgdTh = []; options.rngs.envTh = [];
   return
 end
 
 % Remove unwanted channels
-chSpikeTimes = chSpikeTimes(channelsOI);
-nCh = numel(chSpikeTimes);
-old2newChMapping = options.channelOrder(channelsOI);
+lfp = lfp(options.channelsOI,:);
+nCh = size(lfp,1);
+nSamples = size(lfp,2);
+old2newChMapping = options.channelOrder(options.channelsOI);
 
 % Get electrode dimensions
 % y-axis: yChanInd, yIndInit, yInd, yDim. Each variable has a different meaning and should not be confused.
@@ -290,18 +262,18 @@ xInd = xIndInit(old2newChMapping);
 xDim = numel(unique(xIndInit));
 
 % Collapse channel spike times along specific dimensions or NaN values
-reshapedChSpikeTimes = cell(yDim,xDim);
+reshapedLFP = cell(yDim,xDim);
 for ch = 1:nCh
-  reshapedChSpikeTimes(yInd(ch),xInd(ch)) = chSpikeTimes(ch);
+  reshapedLFP(yInd(ch),xInd(ch)) = {lfp(ch,:)};
 end
 if strcmpi(options.axis, 'all') && options.omitnans
   % In case of omiting rows and columns containing only NaNs but not
   % collapsing over specified dimensions
-  [~, nonEmptyVertInds] = collapseCell(reshapedChSpikeTimes, dim=1);
-  [~, nonEmptyHorzInds] = collapseCell(reshapedChSpikeTimes, dim=2);
+  [~, nonEmptyVertInds] = collapseCell(reshapedLFP, dim=1);
+  [~, nonEmptyHorzInds] = collapseCell(reshapedLFP, dim=2);
   nonEmptyInds = ismember(yInd, nonEmptyVertInds) & ...
     ismember(xInd, nonEmptyHorzInds);
-  chSpikeTimes = chSpikeTimes(nonEmptyInds);
+  lfp = lfp(nonEmptyInds,:);
   [~, yChanInd] = unique(ycoords(nonEmptyInds),'stable');
   yInd = yInd(nonEmptyInds);
   yDim = numel(nonEmptyVertInds);
@@ -312,56 +284,72 @@ else
   % In case of omiting rows and columns containing only NaNs and/or
   % collapsing over specified dimensions
   if strcmpi(options.axis, 'vertical')
-    [chSpikeTimes, nonEmptyVertInds] = collapseCell( ...
-      reshapedChSpikeTimes, dim=1, sortElements='ascend');
-    nonEmptyHorzInds = 1;
+    [reshapedLFP, nonEmptyVertInds] = collapseCell( ...
+      reshapedLFP, dim=1, sortElements='none');
+    lfp = zeros(numel(reshapedLFP),nSamples);
+    for iCh = 1:numel(reshapedLFP)
+      lfp(iCh,:) = mean(reshape(reshapedLFP{iCh}', ...
+        nSamples, numel(reshapedLFP{iCh})/nSamples)'); %#ok<*UDIM> 
+    end
+    nonEmptyHorzInds = 1; %#ok<*NASGU> 
     if options.omitnans
+      lfp = lfp(nonEmptyVertInds,:);
       yInd = yInd(ismember(yInd, nonEmptyVertInds));
     end
     xInd = ones(size(yInd));
     xChanInd = xInd;
+    yDim = size(lfp,1);
+    xDim = 1;
   elseif strcmpi(options.axis, 'horizontal')
-    [chSpikeTimes, nonEmptyHorzInds] = collapseCell( ...
-      reshapedChSpikeTimes, dim=2, sortElements='ascend');
+    [reshapedLFP, nonEmptyHorzInds] = collapseCell( ...
+      reshapedLFP, dim=2, sortElements='none');
+    lfp = zeros(numel(reshapedLFP),nSamples);
+    for iCh = 1:numel(reshapedLFP)
+      lfp(iCh,:) = mean(reshape(reshapedLFP{iCh}', ...
+        nSamples, numel(reshapedLFP{iCh})/nSamples)'); %#ok<*UDIM> 
+    end
     nonEmptyVertInds = 1;
     if options.omitnans
+      lfp = lfp(nonEmptyHorzInds,:);
       xInd = xInd(ismember(xInd, nonEmptyHorzInds));
     end
     yInd = ones(size(xInd));
     yChanInd = yInd;
-  end
-  if options.omitnans
-    % In case of omiting rows and columns containing only NaNs
-    chSpikeTimes = chSpikeTimes(nonEmptyVertInds,nonEmptyHorzInds);
-  end
-  if strcmpi(options.axis, 'vertical') || ...
-      strcmpi(options.axis, 'horizontal') || options.omitnans
-    [yDim,xDim] = size(chSpikeTimes);
+    yDim = 1;
+    xDim = size(lfp,1);
   end
 end
 
-% Generate randomly shuffled channel spike times
-if isempty(options.pgdTh)
-  [randChSpikeTimes, options.rngs.pgdTh] = shuffleSpikeTimes(chSpikeTimes);
-  randChSpikeTimes = randChSpikeTimes(:)';
-elseif isstruct(options.pgdTh)
-  [randChSpikeTimes, options.rngs.pgdTh] = shuffleSpikeTimes(chSpikeTimes, ...
+% Generate randomly shuffled LFP recording
+randLevel = '2';
+if isstruct(options.pgdTh)
+  [randLFP, options.rngs.pgdTh] = shuffleLFP(lfp, randLevel=randLevel, ...
     customRNG=options.pgdTh);
-  randChSpikeTimes = randChSpikeTimes(:)';
-else
-  options.rngs.pgdTh = [];
-end
-
-% Generate pseudorandom population firing rate
-if isstruct(options.envTh)
-  rng(options.envTh.Seed, options.envTh.Type);
-end
-if isempty(options.envTh) || isstruct(options.envTh)
-  randPopulationRate = sort(rand(1,numel(populationRate))*populationRate(end));
-  options.rngs.envelopeTh = rng;
-  options.rngs.envelopeTh = rmfield(options.rngs.envelopeTh,'State');
-else
-  options.rngs.envelopeTh = [];
+  if isempty(options.envTh)
+    options.rngs.envTh = options.rngs.pgdTh;
+  else
+    options.rngs.envTh = [];
+  end
+elseif isstruct(options.envTh)
+  [randLFP, options.rngs.envTh] = shuffleLFP(lfp, randLevel=randLevel, ...
+    customRNG=options.envTh);
+  if isempty(options.pgdTh)
+    options.rngs.pgdTh = options.rngs.envTh;
+  else
+    options.rngs.pgdTh = [];
+  end
+elseif isempty(options.pgdTh) || isempty(options.envTh)
+  [randLFP, rngParams] = shuffleLFP(lfp, randLevel=randLevel);
+  if isempty(options.pgdTh)
+    options.rngs.pgdTh = rngParams;
+  else
+    options.rngs.pgdTh = [];
+  end
+  if isempty(options.envTh)
+    options.rngs.envTh = rngParams;
+  else
+    options.rngs.envTh = [];
+  end
 end
 
 % Calculate hypothetical (because some channels were potentially removed) electrode pitch size
@@ -377,77 +365,44 @@ else
   pitchSize = (horzSpacing + vertSpacing)/2E6; % meters
 end
 
-% Convolve spike times with a Gaussian function
-convPoints = 35;
-[convChSpikeTimes, convTimeBins, convParams] = convolveSpikes( ...
-  chSpikeTimes, stepSize=options.samplingInterval, ...
-  convolutionPoints=convPoints, endTime=lastSpikeTime);
-if isempty(options.pgdTh) || isstruct(options.pgdTh)
-  convRandChSpikeTimes = convolveSpikes(randChSpikeTimes, ...
-    stepSize=options.samplingInterval, convolutionPoints=convPoints, ...
-    endTime=lastSpikeTime);
-end
-populationRate = convolveSpikes(populationRate, ...
-  stepSize=options.samplingInterval, convolutionPoints=convPoints, ...
-  endTime=lastSpikeTime);
-if isempty(options.envTh) || isstruct(options.envTh)
-  randPopulationRate = convolveSpikes(randPopulationRate, ...
-    stepSize=options.samplingInterval, convolutionPoints=convPoints, ...
-    endTime=lastSpikeTime);
-  assert(numel(populationRate) == numel(randPopulationRate));
+% Band-pass filter the LFP recording traces at the frequency range of interest
+filtLFP = bandpassFilterTimeSeries(lfp, ...
+  sampleRate=round(1/options.samplingInterval), frequencyRange=options.freqRange);
+if exist('randLFP','var')
+  filtRandLFP = bandpassFilterTimeSeries(randLFP, ...
+    sampleRate=round(1/options.samplingInterval), frequencyRange=options.freqRange);
 end
 
-% Band-pass filter the convolved population rate at the frequency range of interest
-filtConvChSpikeTimes = bandpassFilterTimeSeries(convChSpikeTimes, ...
-  sampleRate=round(1/convParams.stepSize), frequencyRange=options.freqRange);
-if isempty(options.pgdTh) || isstruct(options.pgdTh)
-  filtConvRandChSpikeTimes = bandpassFilterTimeSeries(convRandChSpikeTimes, ...
-    sampleRate=round(1/convParams.stepSize), frequencyRange=options.freqRange);
-end
-filtPopulationRate = bandpassFilterTimeSeries(populationRate, ...
-  sampleRate=round(1/convParams.stepSize), frequencyRange=options.freqRange);
-if isempty(options.envTh) || isstruct(options.envTh)
-  randFiltPopulationRate = bandpassFilterTimeSeries(randPopulationRate, ...
-    sampleRate=round(1/convParams.stepSize), frequencyRange=options.freqRange);
+% Calculate oscillation phase and envelope
+hilbert1 = hilbert(filtLFP'); % Apply Hilbert transform
+lfpPhase = atan2(imag(hilbert1), real(hilbert1))';
+lfpOscEnvelope = abs(hilbert1)';
+if exist('randLFP','var')
+  hilbert1 = hilbert(filtRandLFP');
+  randLFPPhase = atan2(imag(hilbert1), real(hilbert1))';
+  randLFPOscEnvelope = abs(hilbert1)';
+  randLFPOscEnvMean = mean(randLFPOscEnvelope);
 end
 
-% Calculate oscillation phase
-hilbert1 = hilbert(filtConvChSpikeTimes'); % Apply Hilbert transform
-chSpikeTimesPhase = atan2(imag(hilbert1), real(hilbert1))';
-if isempty(options.pgdTh) || isstruct(options.pgdTh)
-  hilbert1 = hilbert(filtConvRandChSpikeTimes');
-  randChSpikeTimesPhase = atan2(imag(hilbert1), real(hilbert1))';
-end
-hilbert1 = hilbert(filtPopulationRate');
-filtPopulationRatePhase = atan2(imag(hilbert1), real(hilbert1))';
-filtPopulationRatePhaseUnwrapped = unwrap(filtPopulationRatePhase);
-populationRateOscEnvelope = abs(hilbert1)';
+% Estimate Significance threshold for the oscillation envelope
 if isempty(options.envTh) || isstruct(options.envTh)
-  hilbert1 = hilbert(randFiltPopulationRate');
-  randPopulationRateOscEnvelope = abs(hilbert1)';
-else
-  randPopulationRateOscEnvelope = [];
-end
-
-% Estimate Significance threshold for oscillation envelope
-if isempty(options.envTh) || isstruct(options.envTh)
-  [randEnvelopeHist, envBins] = hist(randPopulationRateOscEnvelope, 99); %#ok<*HIST> 
+  flatRandLFPOscEnvelope = reshape(randLFPOscEnvelope,numel(randLFPOscEnvelope),1);
+  [randEnvelopeHist, envBins] = hist(flatRandLFPOscEnvelope, 99);
   randEnvelopeHist = [envBins; randEnvelopeHist];
-  options.envTh = prctile(randPopulationRateOscEnvelope,95);
+  options.envTh = prctile(flatRandLFPOscEnvelope,95);
 else
   randEnvelopeHist = [];
 end
 
 % Reshape recording channel spike times matrix
 nChunks = ceil(0.05/options.samplingInterval); % So we don't run out of memory
-nSamples = numel(convTimeBins);
-phaseGradDir = zeros(size(convTimeBins));
-randPhaseGradDir = zeros(size(convTimeBins));
-centreWeightedWaveDir = zeros(size(convTimeBins));
-waveSpeed = zeros(size(convTimeBins));
-wavelength = zeros(size(convTimeBins));
-netWaveDir = zeros(size(convTimeBins));
-randNetWaveDir = zeros(size(convTimeBins));
+phaseGradDir = zeros(1,nSamples);
+randPhaseGradDir = zeros(1,nSamples);
+centreWeightedWaveDir = zeros(1,nSamples);
+waveSpeed = zeros(1,nSamples);
+wavelength = zeros(1,nSamples);
+netWaveDir = zeros(1,nSamples);
+randNetWaveDir = zeros(1,nSamples);
 for chunk = 1:nChunks
   if chunk == 1 && options.verbose
     disp('   Analysing data...')
@@ -457,15 +412,14 @@ for chunk = 1:nChunks
   end
   chunkSize = ceil(nSamples/nChunks) + 1;
   inds = max([1 chunkSize*(chunk-1)-1]):min([chunkSize*chunk nSamples]);
-  reshapedChSpikeTimesPhase = reshape2ElectrodeDimensions( ...
-    chSpikeTimesPhase, xDim, yDim, xInd, yInd, inds);
+  reshapedLFPPhase = reshape2ElectrodeDimensions(lfpPhase, xDim, yDim, ...
+    xInd, yInd, inds);
 
   % Calculate the phase gradient
   [phaseGradDir_chunk, centreWeightedWaveDir_chunk, waveSpeed_chunk, ...
     wavelength_chunk, netWaveDir_chunk] = GradientMethod( ...
-    SmoothContinuesPhase(reshapedChSpikeTimesPhase), ...
-    reshapedChSpikeTimesPhase, pitchSize, round(1/convParams.stepSize), ...
-    options.electrodePattern);
+    SmoothContinuesPhase(reshapedLFPPhase), reshapedLFPPhase, pitchSize, ...
+    round(1/options.samplingInterval), options.electrodePattern);
   if chunk == 1
     leftInds = inds;
     rightInds = 1:numel(inds);
@@ -481,12 +435,11 @@ for chunk = 1:nChunks
 
   % Calculate the shuffled phase gradient
   if isempty(options.pgdTh) || isstruct(options.pgdTh)
-    reshapedChSpikeTimesPhase = reshape2ElectrodeDimensions( ...
-      randChSpikeTimesPhase, xDim, yDim, xInd, yInd, inds);
+    reshapedLFPPhase = reshape2ElectrodeDimensions(randLFPPhase, ...
+      xDim, yDim, xInd, yInd, inds);
     [phaseGradDir_chunk, ~, ~, ~, netWaveDir_chunk] = GradientMethod( ...
-      SmoothContinuesPhase(reshapedChSpikeTimesPhase), ...
-      reshapedChSpikeTimesPhase, pitchSize, round(1/convParams.stepSize), ...
-      options.electrodePattern);
+    SmoothContinuesPhase(reshapedLFPPhase), reshapedLFPPhase, pitchSize, ...
+    round(1/options.samplingInterval), options.electrodePattern);
     randPhaseGradDir(leftInds) = phaseGradDir_chunk(rightInds);
     randNetWaveDir(leftInds) = netWaveDir_chunk(rightInds);
   end
@@ -504,22 +457,33 @@ else
   pgdSignificanceCutoff = options.pgdTh;
 end
 
-% Detect travelling waves
-cycleNumbers = ceil((filtPopulationRatePhaseUnwrapped+pi)./(2*pi));
+% Number oscillatory cycles
+if strcmpi(options.cycleDemarcationMethod,'medianCh')
+  cycleNumbers = round(median(ceil((unwrap(lfpPhase')'+pi)./(2*pi))));
+elseif strcmpi(options.cycleDemarcationMethod,'maxPowerCh')
+  [oscillatingChannels, ~, oscMaxPower] = detectLFPOsc(lfp, options.freqRange, ...
+    samplingFreq=1/options.samplingInterval);
+  oscillatingChannels = find(oscillatingChannels);
+  [~, maxPowerCh] = max(oscMaxPower(oscillatingChannels));
+  maxPowerCh = oscillatingChannels(maxPowerCh);
+  cycleNumbers = median(ceil((unwrap(lfpPhase(maxPowerCh,:))'+pi)./(2*pi)));
+end
 cycleNumbers(cycleNumbers == 0) = 1;
-oscCycleLocs = populationRateOscEnvelope>options.envTh;
+
+% Detect travelling waves
+lfpOscEnvMean = mean(lfpOscEnvelope);
+oscCycleLocs = lfpOscEnvMean>options.envTh;
 oscCycleCount = numel(unique(cycleNumbers(oscCycleLocs)));
-travellingWaveLocs = phaseGradDir>pgdSignificanceCutoff & ...
-  populationRateOscEnvelope>options.envTh;
+travellingWaveLocs = phaseGradDir>pgdSignificanceCutoff & lfpOscEnvMean>options.envTh;
 travellingWaveOscCycles = unique(cycleNumbers(travellingWaveLocs));
 travellingWaveCycleLocs = ismember(cycleNumbers, travellingWaveOscCycles);
 travellingWaveCount = numel(travellingWaveOscCycles);
 proportionPerOscCycle = travellingWaveCount/oscCycleCount;
-incidence = travellingWaveCount/convTimeBins(end);
+incidence = travellingWaveCount/downsampledTimestamps(end);
 
 % Calculate travelling/nontravelling wave direction distributions
 if strcmpi(options.axis, 'vertical') || strcmpi(options.axis, 'horizontal')
-  [netWaveDirHist, netWaveDirBins] = hist(netWaveDir, unique(netWaveDir));
+  [netWaveDirHist, netWaveDirBins] = hist(netWaveDir, unique(netWaveDir)); %#ok<*HIST> 
   [netWaveDirHist_travel, netWaveDirBins_travel] = hist(netWaveDir( ...
     travellingWaveLocs), unique(netWaveDir(travellingWaveLocs)));
   [netWaveDirHist_nontravel, netWaveDirBins_nontravel] = hist(netWaveDir( ...
@@ -571,15 +535,15 @@ travellingWave.waveSpeed = waveSpeed;
 travellingWave.wavelength = wavelength;
 travellingWave.netWaveDir = netWaveDir;
 travellingWave.shuffledNetWaveDir = randNetWaveDir;
-travellingWave.populationRateOscEnvelope = populationRateOscEnvelope;
-travellingWave.randPopulationRateOscEnvelope = randPopulationRateOscEnvelope;
+travellingWave.lfpOscEnvelope = lfpOscEnvMean;
+travellingWave.shuffledLFPOscEnvelope = randLFPOscEnvMean;
 travellingWave.travellingWaveLocs = travellingWaveLocs;
 travellingWave.travellingWaveCycleLocs = travellingWaveCycleLocs;
 travellingWave.cycleNumbers = cycleNumbers;
-travellingWave.timestamps = convTimeBins;
+travellingWave.timestamps = downsampledTimestamps;
 % Histograms
 travellingWave.shuffledPGDHist = shuffledPGDHist;
-travellingWave.randEnvelopeHist = randEnvelopeHist;
+travellingWave.shuffledEnvelopeHist = randEnvelopeHist;
 travellingWave.netWaveDirHist = netWaveDirHist;
 travellingWave.travellingWaveDirHist = netWaveDirHist_travel;
 travellingWave.nontravellingWaveDirHist = netWaveDirHist_nontravel;
@@ -598,7 +562,7 @@ end
 function electrodeArrangedTimeSeries = reshape2ElectrodeDimensions(verticallyArrangedTimeSeries, xDim, yDim, xInd, yInd, inds)
 % electrodeArrangedTimeSeries = reshape2ElectrodeDimensions(verticallyArrangedTimeSeries, xDim, yDim, xInd, yInd, inds)
 %
-% A helper function to detectTravellingChannelWaves
+% A helper function to detectTravellingLFPWaves
 
 if yDim == 1 % To prevent triggering error in GradientMethod
   electrodeArrangedTimeSeries = nan(2,xDim,numel(inds));
