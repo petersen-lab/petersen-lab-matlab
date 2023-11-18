@@ -216,8 +216,7 @@ lastSpikeTime = max(cellfun(@max, chSpikeTimes(~emptyChSpikeTimes)));
 chFiringRates = zeros(size(emptyChSpikeTimes));
 chFiringRates(~emptyChSpikeTimes) = cellfun(@(x) numel(x)/lastSpikeTime, chSpikeTimes(~emptyChSpikeTimes));
 highFiringChannels = find(chFiringRates >= options.firingRateTh);
-channelsOI = options.channelsOI(ismember(options.channelsOI, highFiringChannels));
-if numel(channelsOI) < 2
+if numel(highFiringChannels) < 2
   warning('Too few high firing channels to perform travelling wave detection. Terminating function call.');
   travellingWave.phaseGradDir = []; travellingWave.shuffledPhaseGradDir = [];
   travellingWave.centreWeightedWaveDir = []; travellingWave.waveSpeed = [];
@@ -250,7 +249,8 @@ else
 end
 options.rngs.oscillationTh = oscScoreParams.shuffle;
 oscillatingChannels = find(oscScore > options.oscillationTh);
-channelsOI = channelsOI(ismember(channelsOI, oscillatingChannels));
+channelsOI = options.channelsOI(ismember(options.channelsOI, oscillatingChannels) & ...
+  ismember(options.channelsOI, highFiringChannels));
 if numel(channelsOI) < 2
   warning('Too few oscillating channels to perform travelling wave detection. Terminating function call.');
   travellingWave.phaseGradDir = []; travellingWave.shuffledPhaseGradDir = [];
