@@ -13,7 +13,7 @@ function saveLFPNoisePeriods(lfpNoisePeriods, options)
 %     '.lfpNoise.events.mat'. If ending is different,
 %     '<basefolder-name>.lfpNoise.events.mat' will be appended to the
 %     filename. If left empty, the output data will be saved in a file
-%     named 'lfpNoise.events.mat'.
+%     named 'lfpNoise.events.mat' in the current working directory.
 %
 % Returns:
 %   None.
@@ -34,7 +34,7 @@ for iPeriod = 1:size(lfpNoisePeriods)
   end
 end
 
-% Organise within the events container
+% Organise data within the events container
 nPeriods = size(lfpNoisePeriods, 1);
 lfpNoise.timestamps = lfpNoisePeriods;
 lfpNoise.eventID = ones(nPeriods,1);
@@ -47,7 +47,7 @@ lfpNoise.detectorinfo.detectiondate = datetime;
 % Save the data
 if isempty(options.outputFilename)
   options.outputFilename = 'lfpNoise.events.mat';
-elseif ~contains(options.outputFilename, '.lfpNoise.events.mat')
+elseif ~contains(options.outputFilename, 'lfpNoise.events.mat', 'IgnoreCase',true)
   [~, basename] = fileparts(options.outputFilename);
   if contains(options.outputFilename, '.mat')
     options.outputFilename = strrep(options.outputFilename, '.mat', ...
