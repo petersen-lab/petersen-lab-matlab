@@ -37,6 +37,7 @@ if ~isempty(cutoffs)
   for cutoff = 1:nCutoffs
     cutoffIdx = find(numericArray >= cutoffs(cutoff,1) ...
       & numericArray <= cutoffs(cutoff,2));
+    cutoffIdx = cutoffIdx(:)';
     reducedNumericArrayIdx = [reducedNumericArrayIdx cutoffIdx]; %#ok<*AGROW>
   end
   reducedNumericArrayIdx = sort(unique(reducedNumericArrayIdx));

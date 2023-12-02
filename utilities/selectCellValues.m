@@ -1,5 +1,5 @@
-function reducedCellArray = selectCellValues(cellArray, cutoffs)
-% reducedCellArray = selectCellValues(cellArray, cutoffs)
+function [reducedCellArray, reducedCellArrayIdx] = selectCellValues(cellArray, cutoffs)
+% [reducedCellArray, reducedCellArrayIdx] = selectCellValues(cellArray, cutoffs)
 %
 % function selects values of individual cells in a cell array within given
 % cutoffs.
@@ -22,6 +22,11 @@ function reducedCellArray = selectCellValues(cellArray, cutoffs)
 %     values (e.g., spike times). M might be different in different cells.
 %     This cell array contains only selected values from cellArray after
 %     applying the cutoffs.
+%   reducedCellArrayIdx (numeric): a shape-(K, 1) cell array of linear
+%     indices to elements within individual cells of the cellArray
+%     producing corresponding elements within individual cells of
+%     reducedCellArray
+%     (reducedCellArray{k} = cellArray{k}(reducedCellArrayIdx)).
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
@@ -35,12 +40,18 @@ end
 nCells = numel(cellArray);
 nCutoffs = size(cutoffs,1);
 reducedCellArray = cell(nCells,1);
+reducedCellArrayIdx = cell(nCells,1);
 for iCell = 1:nCells
   reducedCell = [];
+  reducedIdx = [];
   for cutoff = 1:nCutoffs
+    idx = find(cellArray{iCell} >= cutoffs(cutoff,1) ...
+      & cellArray{iCell} <= cutoffs(cutoff,2));
+    reducedIdx = [reducedIdx, idx(:)'];
     cutoffValues = cellArray{iCell}(cellArray{iCell} >= cutoffs(cutoff,1) ...
       & cellArray{iCell} <= cutoffs(cutoff,2));
     reducedCell = [reducedCell, cutoffValues(:)']; %#ok<*AGROW> 
   end
   reducedCellArray{iCell} = reducedCell;
+  reducedCellArrayIdx{iCell} = reducedIdx;
 end

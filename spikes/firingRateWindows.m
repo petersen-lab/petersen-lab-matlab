@@ -22,7 +22,7 @@ function [maxFiringRate, firingRateEvolution] = firingRateWindows(spikeTimes, op
 %
 % Returns:
 %   maxFiringRate (numeric): a shape-(1, 1) numeric scalar indicating the
-%     highest firing rate in all time windows.
+%     highest firing rate across all time windows (spikes per second).
 %   firingRateEvolution (numeric): a shape-(1, M) numeric array containing
 %     firing rates for all consequtive time windows across the entirety
 %     of the recording.

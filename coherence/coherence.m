@@ -223,6 +223,13 @@ fullCoherence_temp = cell(nUnits,1); % Initialise temporary containers
 half1Coherence_temp = cell(nUnits,1);
 half2Coherence_temp = cell(nUnits,1);
 if options.parallelise
+  p = gcp('nocreate');
+  if isempty(p)
+    parpool('local', feature('numcores'));
+  elseif p.NumWorkers < feature('numcores')
+    delete(gcp('nocreate'));
+    parpool('local', feature('numcores'));
+  end
   parfor unit = 1:nUnits
     [fullCoherence_temp{unit}, half1Coherence_temp{unit}, half2Coherence_temp{unit}] = coherenceCalc( ...
       downsampledSignal(unit,includeIdx), downsampledReference(includeIdx), ...

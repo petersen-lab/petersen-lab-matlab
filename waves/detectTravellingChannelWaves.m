@@ -94,10 +94,10 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %     centreWeightedWaveDir (numeric): a shape-(1, J) numeric array with
 %       centre-weighted travelling wave direction in radians (direction at
 %       the centre of the electrode; see WaveMonk/GradientMethod). Positive
-%       phase indicates a spread from lower order to higher order channels.
-%       For example, if the lower order channels are deeper, then the wave
-%       travels in the ventrodorsal direction. Negative phase in this case
-%       would indicate a spread in the dorsoventral direction.
+%       phase indicates a spread from higher order to lower order channels.
+%       For example, if the higher order channels are deeper, then the wave
+%       travels in the dorsoventral direction. Negative phase in this case
+%       would indicate a spread in the ventrodorsal direction.
 %     waveSpeed (numeric): a shape-(1, J) numeric array indicating the
 %       instantaneous speed of the travelling wave in meters per second.
 %     wavelength (numeric): a shape-(1, J) numeric array with instantaneous
@@ -106,8 +106,8 @@ function [travellingWave, options] = detectTravellingChannelWaves(chSpikeTimes, 
 %       travelling wave direction in radians. Positive phase indicates a
 %       spread from lower order to higher order channels. For example, if
 %       the lower order channels are deeper, then the wave travels in the
-%       ventrodorsal direction. Negative phase in this case would indicate
-%       a spread in the dorsoventral direction.
+%       dorsoventral direction. Negative phase in this case would indicate
+%       a spread in the ventrodorsal direction.
 %     shuffledNetWaveDir (numeric): a shape-(1, J) numeric array containing
 %       travelling wave direction in radians calculated based on the
 %       shuffled spike times.

@@ -32,6 +32,6 @@ for row = 1:size(timeSeries,1)
   if sum(isnan(timeSeries(row,:))) && sum(isnan(timeSeries(row,:))) < numel(timeSeries(row,:))
     error('Input data contains NaNs');
   elseif ~sum(isnan(timeSeries(row,:)))
-    timeSeries(row,:) = filtfilt(btheta,atheta,timeSeries(row,:));
+    timeSeries(row,:) = filtfilt(btheta,atheta,double(timeSeries(row,:)));
   end
 end

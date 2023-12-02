@@ -100,10 +100,10 @@ function [travellingWave, options] = detectTravellingLFPWaves(lfp, xcoords, ycoo
 %       travelling wavelengths in meters.
 %     netWaveDir (numeric): a shape-(1, J) numeric array containing
 %       travelling wave direction in radians. Positive phase indicates a
-%       spread from lower order to higher order channels. For example, if
+%       spread from higher order to lower order channels. For example, if
 %       the lower order channels are deeper, then the wave travels in the
-%       ventrodorsal direction. Negative phase in this case would indicate
-%       a spread in the dorsoventral direction.
+%       dorsoventral direction. Negative phase in this case would indicate
+%       a spread in the ventrodorsal direction.
 %     shuffledNetWaveDir (numeric): a shape-(1, J) numeric array containing
 %       travelling wave direction in radians calculated based on the
 %       shuffled LFP data.
