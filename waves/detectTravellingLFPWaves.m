@@ -25,7 +25,7 @@ function [travellingWave, options] = detectTravellingLFPWaves(lfp, xcoords, ycoo
 %     channels are included.
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array
 %     defining frequency range over which to calculate the oscillation
-%     score and filter data (default=[4 11]);
+%     score and filter data (default=[4 12]);
 %   axis (char, optional, keyword): a shape-(1, K) character array
 %     indicating axes along which to calculate the travelling wave
 %     direction. The following three options are available:
@@ -187,7 +187,7 @@ arguments
   options.samplingInterval (1,1) {mustBePositive} = 0.002
   options.channelOrder (1,:) {mustBePositive,mustBeVector} = 1:numel(xcoords)
   options.channelsOI (1,:) {mustBePositive,mustBeVector} = 1:numel(xcoords)
-  options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 11]
+  options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 12]
   options.axis (1,:) {mustBeMember(options.axis,{'all','vertical','horizontal'})} = 'all'
   options.omitnans (1,1) {islogical} = true
   options.oscillationTh (1,1) {islogical} = false

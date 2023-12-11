@@ -13,7 +13,7 @@ function [spikesPresentation, timeBins, parameters] = convolveSpikes(spikeTimes,
 %     (default=0.002).
 %   convolutionPoints (numeric, optional, keyword): a shape-(1, 1) numeric
 %     scalar with Gaussian convolution sample points (gausswin;
-%     default=50).
+%     default=25).
 %   startTime (numeric, optional, keyword): a shape-(1, 1) numeric scalar
 %     with the start time bin (default = stepSize).
 %   endTime (numeric, optional, keyword): a shape-(1, 1) numeric scalar
@@ -46,7 +46,7 @@ function [spikesPresentation, timeBins, parameters] = convolveSpikes(spikeTimes,
 arguments
   spikeTimes (:,:) {mustBeNumericOrListedType(spikeTimes,'cell')}
   options.stepSize (1,1) {mustBeNumeric,mustBePositive} = 0.002
-  options.convolutionPoints (1,1) {mustBeNumeric,mustBePositive} = 50
+  options.convolutionPoints (1,1) {mustBeNumeric,mustBePositive} = 25
   options.startTime (:,:) {mustBeNumeric,mustBeScalarOrEmpty} = []
   options.endTime (:,:) {mustBeNumeric,mustBeScalarOrEmpty} = []
 end

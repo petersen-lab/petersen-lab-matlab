@@ -1,7 +1,7 @@
 function [instTheta, params] = instThetaForPointProcess(times, options)
 % [instTheta, params] = instThetaForPointProcess(times, <options>)
 %
-% Calculates instantaneous theta (4-11 Hz) frequency band phase and power
+% Calculates instantaneous theta (4-12 Hz) frequency band phase and power
 % for a given point process signal using multi-taper estimation and the
 % Chronux toolbox (http://chronux.org/).
 %
@@ -48,7 +48,7 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     to producing a continuous spiking rate trace (default = 0.002).
 %   convolutionPoints (numeric, optional, keyword): a shape-(1, 1) scalar
 %     representing points of gaussian convolution (gausswin) used to smooth
-%     binned spiking rate (default = 50 sample points).
+%     binned spiking rate (default = 25 sample points).
 %   showPhase (logical, optional, keyword): a shape-(1, 1) logical scalar
 %     for ploting the theta oscillation phase (default = false). As part of
 %     displaying the pahse, the theta frequency power, the convolved
@@ -136,7 +136,7 @@ arguments
   options.cutoffs (1,2) {mustBeVector} = [0 13]
   options.filterSpectrogram (1,1) {islogical} = false
   options.stepsize (1,1) {mustBeNumeric} = 0.002
-  options.convolutionPoints (1,1) {mustBeNumeric} = 50
+  options.convolutionPoints (1,1) {mustBeNumeric} = 25
   options.showPower (1,1) {islogical} = false
   options.showPhase (1,1) {islogical} = false
   options.smoothFrequencies (1,1) {islogical} = false
@@ -152,7 +152,7 @@ else
 end
 
 % Default theta range
-options.range = [4 11];
+options.range = [4 12];
 
 % Spectrogram
 [spectrogram, t, f] = MTPointSpectrogram( ...

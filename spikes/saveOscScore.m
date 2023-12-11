@@ -9,7 +9,7 @@ function saveOscScore(spikesFile, options)
 %     array with the filename storing unit spike times.
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array
 %     defining frequency range over which to calculate the oscillation
-%     score (default=[4 11]);
+%     score (default=[4 12]);
 %   sr (numeric, optional, keyword): a shape-(1, 1) numeric scalar
 %     frequency for sampling the signal in Hz (default=500).
 %   shuffle (logical | struct, optional, keyword): a shape-(1, 1) logical
@@ -53,7 +53,7 @@ function saveOscScore(spikesFile, options)
 
 arguments
   spikesFile (1,:) {mustBeA(spikesFile,'char')}
-  options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 11]
+  options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 12]
   options.sr (1,1) {mustBePositive} = 500
   options.shuffle (1,1) {mustBeLogicalOrListedType(options.shuffle,'struct')} = false;
   options.outputFilename (1,:) {mustBeA(options.outputFilename,'char')} = ''

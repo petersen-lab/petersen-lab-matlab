@@ -22,7 +22,7 @@ function timeSeries = bandpassFilterTimeSeries(timeSeries, options)
 arguments
   timeSeries (:,:) {mustBeNumeric}
   options.sampleRate (1,1) {mustBeNumeric,mustBePositive} = 500
-  options.frequencyRange (1,2) {mustBeNumeric,mustBeVector,mustBePositive} = [4 11]
+  options.frequencyRange (1,2) {mustBeNumeric,mustBeVector,mustBePositive} = [4 12]
 end
 
 % Filter time series data
