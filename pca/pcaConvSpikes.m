@@ -47,7 +47,8 @@ function [pcaOut, pcaOutFilt] = pcaConvSpikes(spikeTimes, options)
 %   about this function, type 'help pca'.
 %
 % Dependencies:
-%
+%   petersen-lab/petersen-lab-matlab
+%     (https://github.com/petersen-lab/petersen-lab-matlab/).
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
