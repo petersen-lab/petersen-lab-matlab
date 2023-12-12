@@ -221,6 +221,10 @@ end
 %% Carry out coherence and correlation analyses
 if isempty(unitSpikeTimes) || isempty(populationSpikeTimes)
   warning('Empty spike count vectors supplied for coherence analysis. Quiting...');
+  fullCoherence = [];
+  thetaPhaseTopography = [];
+  fullInterpCoherence = [];
+  interpThetaPhaseTopography = [];
 else
   % Calculate coherence
   freqGrid = frequencyRange(1):0.01:frequencyRange(2);
