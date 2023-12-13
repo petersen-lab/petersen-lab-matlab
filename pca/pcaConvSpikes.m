@@ -88,9 +88,9 @@ filtSignal = zeros(size(filtConvChSpikeTimes(:,inds)'));
 if options.normalise
   for unit = 1:size(convChSpikeTimes(:,inds)',2)
     signal(:,unit) = (convChSpikeTimes(unit,inds) - ...
-      mean(convChSpikeTimes(unit,inds)))./std(convChSpikeTimes(unit,inds));
+      mean(convChSpikeTimes(unit,inds)))./max([realmin std(convChSpikeTimes(unit,inds))]);
     filtSignal(:,unit) = (filtConvChSpikeTimes(unit,inds) - ...
-      mean(filtConvChSpikeTimes(unit,inds)))./std(filtConvChSpikeTimes(unit,inds));
+      mean(filtConvChSpikeTimes(unit,inds)))./max([realmin std(filtConvChSpikeTimes(unit,inds))]);
   end
 else
   for unit = 1:size(convChSpikeTimes(:,inds)',2)
