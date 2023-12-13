@@ -36,11 +36,12 @@ function [pcaOut, pcaOutFilt] = pcaConvSpikes(spikeTimes, options)
 % Returns:
 %   pcaOut (struct): a shape-(1, 1) scalar structure containing the output
 %     of the PCA performed on the convolved signal. The fields are exactly
-%     the same as those of the native Matlab's pca function.
+%     the same as those of the native Matlab's pca function with an
+%     additional timestamps field.
 %   pcaOutFilt (struct): a shape-(1, 1) scalar structure containing the
 %     output of the PCA performed on the convolved and band-pass filtered
 %     signal. The fields are exactly the same as those of the native
-%     Matlab's pca function.
+%     Matlab's pca function with an additional timestamps field.
 %
 % Comments:
 %   This is the wrapper of the Matlab's native pca function. To learn more
@@ -102,5 +103,7 @@ else
 end
 [pcaOut.coeff, pcaOut.score, pcaOut.latent, pcaOut.tsquared, ...
   pcaOut.explained, pcaOut.mu] = pca(signal(:,includeUnits));
+pcaOut.timestamps = convTimeBins';
 [pcaOutFilt.coeff, pcaOutFilt.score, pcaOutFilt.latent, pcaOutFilt.tsquared, ...
   pcaOutFilt.explained, pcaOutFilt.mu] = pca(filtSignal(:,includeUnits));
+pcaOutFilt.timestamps = convTimeBins';
