@@ -85,25 +85,33 @@ end
 
 % PCA
 signal = zeros(size(convChSpikeTimes(:,inds)'));
-filtSignal = zeros(size(filtConvChSpikeTimes(:,inds)'));
 if options.normalise
   for unit = 1:size(convChSpikeTimes(:,inds)',2)
     signal(:,unit) = (convChSpikeTimes(unit,inds) - ...
       mean(convChSpikeTimes(unit,inds)))./max([realmin std(convChSpikeTimes(unit,inds))]);
-    filtSignal(:,unit) = (filtConvChSpikeTimes(unit,inds) - ...
-      mean(filtConvChSpikeTimes(unit,inds)))./max([realmin std(filtConvChSpikeTimes(unit,inds))]);
   end
 else
   for unit = 1:size(convChSpikeTimes(:,inds)',2)
     signal(:,unit) = (convChSpikeTimes(unit,inds) - ...
       mean(convChSpikeTimes(unit,inds)));
-    filtSignal(:,unit) = (filtConvChSpikeTimes(unit,inds) - ...
-      mean(filtConvChSpikeTimes(unit,inds)));
   end
 end
 [pcaOut.coeff, pcaOut.score, pcaOut.latent, pcaOut.tsquared, ...
   pcaOut.explained, pcaOut.mu] = pca(signal(:,includeUnits));
-pcaOut.timestamps = convTimeBins';
+pcaOut.timestamps = convTimeBins(inds)';
+
+signal = zeros(size(filtConvChSpikeTimes(:,inds)'));
+if options.normalise
+  for unit = 1:size(convChSpikeTimes(:,inds)',2)
+    signal(:,unit) = (filtConvChSpikeTimes(unit,inds) - ...
+      mean(filtConvChSpikeTimes(unit,inds)))./max([realmin std(filtConvChSpikeTimes(unit,inds))]);
+  end
+else
+  for unit = 1:size(convChSpikeTimes(:,inds)',2)
+    signal(:,unit) = (filtConvChSpikeTimes(unit,inds) - ...
+      mean(filtConvChSpikeTimes(unit,inds)));
+  end
+end
 [pcaOutFilt.coeff, pcaOutFilt.score, pcaOutFilt.latent, pcaOutFilt.tsquared, ...
-  pcaOutFilt.explained, pcaOutFilt.mu] = pca(filtSignal(:,includeUnits));
-pcaOutFilt.timestamps = convTimeBins';
+  pcaOutFilt.explained, pcaOutFilt.mu] = pca(signal(:,includeUnits));
+pcaOutFilt.timestamps = convTimeBins(inds)';
