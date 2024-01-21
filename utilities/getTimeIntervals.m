@@ -19,6 +19,12 @@ function sessionIntervals = getTimeIntervals(dataFile, epochsOfInterest, options
 %     'moderate' - intervals with above-average theta power only.
 %     'high' - intervals with the theta power above 75th percentile.
 %     '' - no restrictions on theta frequency range power (default).
+%   thetaAmplitude (char, optional, keyword): a shape-(1, K) character
+%     array describing the theta amplitude range of the data interval. The
+%     following options are available:
+%     'moderate' - intervals with above-average theta amplitude only.
+%     'high' - intervals with the theta amplitude above 75th percentile.
+%     '' - no restrictions on theta amplitude range (default).
 %   minIntervalLength (numeric, optional, keyword): a shape-(1, 1) numeric
 %     scalar defining the minimal interval duration (default=0). Smaller
 %     intervals will be excluded.
@@ -56,6 +62,7 @@ arguments
   dataFile (1,:) {mustBeA(dataFile,'char')}
   epochsOfInterest {mustBeCharOrListedType(epochsOfInterest,'cell')}
   options.thetaPower (1,:) {mustBeA(options.thetaPower,'char')} = '';
+  options.thetaAmplitude (1,:) {mustBeA(options.thetaAmplitude,'char')} = '';
   options.minIntervalLength (1,1) {mustBeNumeric,mustBeNonnegative} = 0;
   options.onlyTrials (1,1) {mustBeA(options.onlyTrials,'logical')} = false
   options.onlyHighSpeed (1,1) {mustBeA(options.onlyHighSpeed,'logical')} = false
@@ -95,6 +102,15 @@ if strcmpi(options.thetaPower,'moderate') || strcmpi(options.thetaPower,'high')
     warning(['Theta power file ' thetaPowerFile ' does not exist.'])
   end
 end
+if strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high')
+  thetaAmplitudeFile = strrep(dataFile, '*', 'thetaAmplitude.timeseries');
+  if exist(thetaAmplitudeFile,'file')
+    load(thetaAmplitudeFile);
+  else
+    options.thetaAmplitudeFile = '';
+    warning(['Theta amplitude file ' thetaAmplitudeFile ' does not exist.'])
+  end
+end
 if options.onlyTrials || options.onlyHighSpeed
   circularTrackFile = strrep(dataFile, '*', 'circular_track.behavior');
   if exist(circularTrackFile,'file')
@@ -110,8 +126,13 @@ if ~isempty(options.sleepState)
   if exist(eegStatesFile,'file')
     load(eegStatesFile);
   else
-    options.sleepState = '';
     warning(['EEG states file ' eegStatesFile ' does not exist. EEG states data is missing.'])
+  end
+  sleepStateFile = strrep(dataFile, '*', 'SleepState.states');
+  if exist(sleepStateFile,'file')
+    load(sleepStateFile);
+  else
+    warning(['Sleep state file ' sleepStateFile ' does not exist. Sleep state data is missing.'])
   end
 end
 
@@ -147,6 +168,20 @@ for epoch = 1:numel(session.epochs)
       interval = intervalOverlap(interval, increasedThetaPowerIntervals);
     end
 
+    % Select time intervals corresponding to increased theta amplitude
+    if (strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high')) && ~isempty(interval)
+      if strcmpi(options.thetaAmplitude,'moderate')
+        increasedThetaAmplitudeIntervals = thetaAmplitude.data >= mean(thetaAmplitude.data);
+      elseif strcmpi(options.thetaAmplitude,'high')
+        increasedThetaAmplitudeIntervals = thetaAmplitude.data >= prctile(thetaAmplitude.data,75);
+      end
+      increasedThetaAmplitudeIntervals = logical2intervals(increasedThetaAmplitudeIntervals);
+      increasedThetaAmplitudeIntervals(:,2) = increasedThetaAmplitudeIntervals(:,2) + 1;
+      increasedThetaAmplitudeIntervals(end,2) = min([increasedThetaAmplitudeIntervals(end,2) numel(thetaAmplitude.timestamps)]);
+      increasedThetaAmplitudeIntervals = thetaAmplitude.timestamps(increasedThetaAmplitudeIntervals);
+      interval = intervalOverlap(interval, increasedThetaAmplitudeIntervals);
+    end
+
     % Select time intervals corresponding to trials only
     if options.onlyTrials && ~isempty(interval)
       if exist('circular_track','var') && isfield(circular_track,'trials')
@@ -161,7 +196,7 @@ for epoch = 1:numel(session.epochs)
     % Select time intervals corresponding to high speeds
     if options.onlyHighSpeed && ~isempty(interval)
       if exist('circular_track','var') && isfield(circular_track,'speed')
-        highSpeedIntervals = circular_track.speed >= circular_track.speed_th;
+        highSpeedIntervals = circular_track.speed >= 30; %circular_track.speed_th;
         highSpeedIntervals = logical2intervals(highSpeedIntervals);
         highSpeedIntervals(:,2) = highSpeedIntervals(:,2) + 1;
         highSpeedIntervals(end,2) = min([highSpeedIntervals(end,2) numel(circular_track.timestamps)]);
@@ -185,6 +220,8 @@ for epoch = 1:numel(session.epochs)
           case 'rem'
             interval = intervalOverlap(interval, SleepState.ints.REMstate);
         end
+      else
+        interval = [];
       end
     end
 

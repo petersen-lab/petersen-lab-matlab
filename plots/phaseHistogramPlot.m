@@ -121,4 +121,7 @@ if ~isempty(options.figPath)
   filename = strrep(filename, '.','p');
   filename = [options.figPath filesep filename '.fig']; %#ok<*AGROW>
   savefig(fH,filename,'compact');
+  title('');
+  saveas(fH,filename(1:end-4),'png');
+  close(fH);
 end

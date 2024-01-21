@@ -160,6 +160,9 @@ for f = 1:nFreq
       filename = strrep(filename, '.','p');
       filename = [options.figPath filesep filename '.fig']; %#ok<*AGROW>
       savefig(fH,filename,'compact');
+      title('');
+      saveas(fH,filename(1:end-4),'png');
+      close(fH);
     end
   end
 end

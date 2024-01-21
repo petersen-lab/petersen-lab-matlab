@@ -100,6 +100,7 @@ figPath1 = fullfile(figPath1(1).folder, figPath1(1).name);
 [figH, ax1] = fig2liveScript(figPath1, xlim=options.xlim1, ...
   ylim=options.ylim1, legendLocation=options.legendLocation1, ...
   figSize=options.figSize, tight=options.tight);
+set(ax1, 'Colormap',hsv);
 
 % Draw figure 2
 figPath2 = dir(figPath2);
@@ -107,6 +108,7 @@ figPath2 = fullfile(figPath2(1).folder, figPath2(1).name);
 [~, ax2] = fig2liveScript(figPath2, xlim=options.xlim2, ...
   ylim=options.ylim2, legendLocation=options.legendLocation2, ...
   figSize=options.figSize, tight=options.tight);
+set(ax2, 'Colormap',hsv);
 set(ax2, 'Parent',figH);
 
 % Draw figure 3
@@ -116,6 +118,7 @@ if ~isempty(options.figPath3)
   [~, ax3] = fig2liveScript(figPath3, xlim=options.xlim3, ...
   ylim=options.ylim3, legendLocation=options.legendLocation3, ...
   figSize=options.figSize, tight=options.tight);
+  set(ax3, 'Colormap',hsv);
   set(ax3, 'Parent',figH);
   varargout{1} = ax3;
 end

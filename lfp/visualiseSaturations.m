@@ -11,6 +11,10 @@ function saturationDetectionOutput = visualiseSaturations(lfpFile, options)
 %   lfpFile (char, required, positional): a shape-(1, P) character array
 %     with the full path and a basename of the LFP file in the form:
 %     <path-to-data-folder>\<basename>.lfp.
+%   chanMapFile (char, optional, keyword): a shape-(1, Q) character array
+%     with the full path to the channel map matlab file (kilosort format).
+%     Supply this file path if chanMap.mat file does not exist in the same
+%     folder as the LFP file or is named differently.
 %   lfpSamplingInterval (numeric, optional, keyword): a shape-(1, 1) LFP
 %     sampling interval. If left empty, the function will try to discern it
 %     by loading sessionInfo data from the same folder location as the LFP
@@ -41,6 +45,7 @@ function saturationDetectionOutput = visualiseSaturations(lfpFile, options)
 
 arguments
   lfpFile (1,:) {mustBeA(lfpFile,'char')}
+  options.chanMapFile (1,:) {mustBeA(options.chanMapFile,'char')} = ''
   options.lfpSamplingInterval (:,:) {mustBeNumeric} = []
   options.channels (:,:) {mustBeNumeric} = []
 end
@@ -50,17 +55,23 @@ fR = fopen(lfpFile, 'r');
 lfp = fread(fR, 'int16=>int16');
 
 % Load the probe channel map file
-chanMapFile = fullfile(fileparts(lfpFile), 'chanMap.mat');
-load(chanMapFile, 'connected');
+if isempty(options.chanMapFile)
+  options.chanMapFile = fullfile(fileparts(lfpFile), 'chanMap.mat');
+end  
+load(options.chanMapFile, 'connected');
 nCh = sum(connected);
 
 % Reshape LFP data
-lfp = reshape(lfp,nCh,[]);
+try
+  lfp = reshape(lfp,nCh,[]);
+catch
+  lfp = reshape(lfp,nCh+1,[]); % In case there is an extra analog channel
+end
 
 % Work out the sampling interval
 sessionInfoFile = strrep(lfpFile, 'lfp', 'sessionInfo.mat');
 if isempty(options.lfpSamplingInterval)
-  if exist(sessionInfoFile,'file')
+  if exist(sessionInfoFile,'file') && contains(sessionInfoFile, 'sessionInfo.mat')
     load(sessionInfoFile); %#ok<LOAD> 
     options.lfpSamplingInterval = 1/sessionInfo.lfpSampleRate;
   else
