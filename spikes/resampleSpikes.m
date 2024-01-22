@@ -34,7 +34,7 @@ end
 
 
 %% Generating continuous resampled spike container
-spikeTimeBins = max([1 floor(options.startTime/options.stepsize)])*options.stepsize:options.stepsize:getMaxSpikeTime(spikeTimes)+options.stepsize;
+spikeTimeBins = max([1 floor(options.startTime/options.stepsize)])*options.stepsize:options.stepsize:(getMaxSpikeTime(spikeTimes)+options.stepsize);
 resampledSpikes = zeros(1,numel(spikeTimeBins));
 
 
