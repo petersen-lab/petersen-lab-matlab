@@ -19,6 +19,9 @@ function [resampledSpikeCounts, timeBins] = resampleSpikeCounts(spikeCounts, opt
 %   timeBins (numeric) a shape-(1, L) numeric array time bins corresponding
 %     to the columns of resampledSpikeCounts matrix.
 %
+% Dependencies:
+%   None.
+%
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 

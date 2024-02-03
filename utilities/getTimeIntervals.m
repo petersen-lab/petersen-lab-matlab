@@ -219,6 +219,8 @@ for epoch = 1:numel(session.epochs)
             interval = intervalOverlap(interval, SleepState.ints.NREMstate);
           case 'rem'
             interval = intervalOverlap(interval, SleepState.ints.REMstate);
+          otherwise
+            interval = [];
         end
       else
         interval = [];

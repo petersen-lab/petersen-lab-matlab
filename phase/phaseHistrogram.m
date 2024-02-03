@@ -1,5 +1,5 @@
-function [binCounts, binLocs, totalCounts, phaseMeans] = phaseHistrogram(phase, options)
-% [valueCounts, binLocs] = phaseHistrogram(phase, <options>)
+function [binCounts, binLocs, totalCounts, phaseMeans, phaseSDs] = phaseHistrogram(phase, options)
+% [binCounts, binLocs, totalCounts, phaseMeans, phaseSDs] = phaseHistrogram(phase, <options>)
 %
 % Function produces a phase histogram (bin counts of phase values, not an
 % actual graph).
@@ -18,6 +18,12 @@ function [binCounts, binLocs, totalCounts, phaseMeans] = phaseHistrogram(phase, 
 %     counts in each bin.
 %   binLocs (numeric): a shape-(1, nBins) numeric array with phase
 %     histogram bin locations in radians.
+%   totalCounts (numeric): a shape-(1, N) numeric array of non-NaN counts
+%     (over phase matrix columns).
+%   phaseMeans (numeric): a shape-(1, N) numeric array of phase means (over
+%     phase matrix columns).
+%   phaseSDs (numeric): a shape-(1, N) numeric array of phase standard
+%     deviations (over phase matrix columns).
 %
 % Dependencies
 %   
@@ -51,4 +57,4 @@ else
 end
 
 % Calculate phase means and all values per column (excludes NaNs)
-[phaseMeans, ~, totalCounts] = datamean(phase, 'circularNP');
+[phaseMeans, ~, totalCounts, phaseSDs] = datamean(phase, 'circularNP');

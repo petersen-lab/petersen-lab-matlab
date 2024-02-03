@@ -52,6 +52,9 @@ if isempty(options.binLocs)
   options.binLocs = phaseRange(1)+binSize/2:binSize:phaseRange(2);
 end
 
+% Drawing parameters
+fontSize = 14;
+
 % Determine x-axis tick labels
 switch options.centre
   case 0
@@ -96,8 +99,8 @@ if ~isempty(options.figText)
 end
 
 % Label axes
-xlabel('Phase (rad)')
-ylabel('Unit count')
+xlabel('Phase (rad)', 'FontSize',fontSize, 'FontWeight','bold');
+ylabel('Spike count', 'FontSize',fontSize, 'FontWeight','bold');
 
 % Add the figure title
 if ~isempty(options.figTitle)
@@ -123,5 +126,4 @@ if ~isempty(options.figPath)
   savefig(fH,filename,'compact');
   title('');
   saveas(fH,filename(1:end-4),'png');
-  close(fH);
 end

@@ -1,5 +1,5 @@
-function [dataMean, dataCI95, counts] = datamean(data, meanType)
-% [dataMean, dataCI95, counts] = datamean(data, <meanType>)
+function [dataMean, dataCI95, counts, dataStd, dataSEM] = datamean(data, meanType)
+% [dataMean, dataCI95, counts, dataStd, dataSEM] = datamean(data, <meanType>)
 %
 % Function calculates the mean and the 95% confidence interval of a data
 % matrix. Infinite values are treated as NaNs. NaNs are ommited from
@@ -23,6 +23,9 @@ function [dataMean, dataCI95, counts] = datamean(data, meanType)
 %     limits around the data mean(s).
 %   counts (numeric): a shape-(1, N) numeric array of non-NaN counts (over
 %     columns if data is a matrix).
+%   dataStd (numeric) a shape-(1, N) numeric array with standard deviations.
+%   dataSEM (numeric) a shape-(1, N) numeric array with standard error of
+%     the mean.
 %
 % Dependencies:
 %   Circular Statistics Toolbox (https://github.com/circstat/circstat-matlab).
@@ -41,42 +44,44 @@ end
 % Initialise output containers
 dataMean = []; dataCI95 = [];
 if isempty(data)
-    return
+  return
 end
 data(isinf(data)) = NaN;
 counts = sum(~isnan(data),1); % number of significant cells
 F = size(data, 2); % number of frequencies or time
 if counts == 1
-    dataMean = data(~isnan(data));
-    return
+  dataMean = data(~isnan(data));
+  return
 end
 
 % Mean calculations
 if strcmp(meanType, 'regular') % regular means
-    dataMean = mean(data, 1, 'omitnan');
-    dataStd = std(data, 1, 'omitnan');
-    dataSEM = dataStd ./ counts;
-    CI95 = zeros(2,F); % regular confidence intervals
-    dataCI95 = zeros(2,F);
-    for f = 1:F
-        CI95(:,f) = (tinv([0.025 0.975], counts(f)-1))';
-        dataCI95(:,f) = bsxfun(@times, dataSEM(f), CI95(:,f));
-    end
+  dataMean = mean(data, 1, 'omitnan');
+  dataStd = std(data, 1, 'omitnan');
+  dataSEM = dataStd ./ counts;
+  CI95 = zeros(2,F); % regular confidence intervals
+  dataCI95 = zeros(2,F);
+  for f = 1:F
+    CI95(:,f) = (tinv([0.025 0.975], counts(f)-1))';
+    dataCI95(:,f) = bsxfun(@times, dataSEM(f), CI95(:,f));
+  end
 elseif strcmp(meanType, 'circular') || strcmp(meanType, 'circularNP') % circular means
-    dataMean = NaN(1,size(data,2));
-    dataCI95 = NaN(2,size(data,2));
-    for j = 1:size(data,2)
-      if sum(~isnan(data(:,j)))
-        dataMean(j) = circmean(data(:,j));
-        if strcmp(meanType, 'circular')
-            dataCI95(2,j) = circ_confmean(data(~isnan(data(:,j)),j), 0.05); % parametric circular confidence intervals
-        else
-            dataCI95(2,j) = circ_confmeanFisher(data(~isnan(data(:,j)),j), 0.05); % non-parametric circular confidence intervals
-        end
-      else
-        dataMean(j) = NaN;
-        dataCI95(2,j) = NaN;
+  dataMean = NaN(1,size(data,2));
+  dataStd = NaN(1,size(data,2));
+  dataSEM = NaN(1,size(data,2));
+  dataCI95 = NaN(2,size(data,2));
+  for j = 1:size(data,2)
+    dataExist = ~isnan(data(:,j));
+    if sum(dataExist)
+      dataMean(j) = circmean(data(:,j));
+      dataStd(j) = std(data(dataExist,j));
+      dataSEM(j) = dataStd(j) ./ counts;
+      if strcmp(meanType, 'circular')
+        dataCI95(2,j) = circ_confmean(data(~isnan(data(:,j)),j), 0.05); % parametric circular confidence intervals
+      elseif strcmp(meanType, 'circularNP')
+        dataCI95(2,j) = circ_confmeanFisher(data(~isnan(data(:,j)),j), 0.05); % non-parametric circular confidence intervals
       end
     end
-    dataCI95(1,:) = -dataCI95(2,:);
+  end
+  dataCI95(1,:) = -dataCI95(2,:);
 end
