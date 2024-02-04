@@ -42,7 +42,9 @@ newBiggestIndex = ceil(biggestIndex*(newsr/sr));
 resampledSpikeCounts = zeros(size(spikeCounts,1), newBiggestIndex);
 for s = 1:newBiggestIndex
   iEnd = (s-1)*sampleDuration+sampleDuration;
-  if iEnd > biggestIndex
+  if iEnd == biggestIndex+sampleDuration
+      iSum = 0;
+  elseif iEnd > biggestIndex
     iSum = sum(spikeCounts(:,(s-1)*sampleDuration+1:biggestIndex),2);
     iSum = iSum*(sampleDuration/(biggestIndex-((s-1)*sampleDuration)));
   else

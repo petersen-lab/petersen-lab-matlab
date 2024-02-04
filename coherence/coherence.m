@@ -230,8 +230,7 @@ if options.parallelise
     delete(gcp('nocreate'));
     parpool('local', feature('numcores'));
   end
-  %parfor unit = 1:nUnits
-  for unit = 1:nUnits
+  parfor unit = 1:nUnits
     [fullCoherence_temp{unit}, half1Coherence_temp{unit}, half2Coherence_temp{unit}] = coherenceCalc( ...
       downsampledSignal(unit,includeIdx), downsampledReference(includeIdx), ...
       freqRange=options.freqRange, samplingInterval=options.stepsize, ...

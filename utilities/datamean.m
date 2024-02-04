@@ -51,6 +51,7 @@ counts = sum(~isnan(data),1); % number of significant cells
 F = size(data, 2); % number of frequencies or time
 if counts == 1
   dataMean = data(~isnan(data));
+  dataCI95 = 0; dataStd = 0; dataSEM = 0;
   return
 end
 

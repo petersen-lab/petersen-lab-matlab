@@ -37,7 +37,7 @@ function [binCounts, binLocs, totalCounts, phaseMeans, phaseSDs] = phaseHistrogr
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
-  phase (:,:) {mustBeNumeric}
+  phase (:,:) {mustBeNumeric,mustBeNonempty}
   options.centre (1,1) {mustBeNumeric,mustBeNonNan,mustBeReal} = 0
   options.nBins (1,1) {mustBeNumeric,mustBePositive} = 10
 end
