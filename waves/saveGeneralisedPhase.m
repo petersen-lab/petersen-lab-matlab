@@ -12,6 +12,9 @@ function savedFiles = saveGeneralisedPhase(populationRateFolderOrFile, options)
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) vector array
 %     with frequency cutoff values for evaluating the wide-band phase of
 %     the signal (default=[2 12]).
+%   passbandFilter (logical, optional, keyword): a shape-(1, 1) logical
+%     scalar controlling whether to bandpass filter the signal within the
+%     freqRange (default=true).
 %   stepsize (numeric, optional, keyword): a shape-(1, 1) scalar
 %     representing the step size (in seconds) used for binning spikes to
 %     produce a continuous spiking rate trace (default=0.002).
@@ -49,6 +52,7 @@ function savedFiles = saveGeneralisedPhase(populationRateFolderOrFile, options)
 arguments
   populationRateFolderOrFile (1,:) {mustBeA(populationRateFolderOrFile,'char')}
   options.freqRange (1,2) {mustBeVector,mustBePositive} = [2 12]
+  options.passbandFilter (1,1) {islogical} = true
   options.stepsize (1,1) {mustBePositive} = 0.002
   options.convolutionPoints (1,1) {mustBeNumeric,mustBePositive} = 25
   options.showPhase (1,1) {islogical} = false
@@ -71,8 +75,8 @@ basename = strrep(file2find.name, '.populationRate.cellinfo.mat', '');
 
 % Estimate wide-band frequency oscillation/fluctuation phase and instantaneous frequency
 [generalisedPhase, parameters] = generalisedPhaseForPointProcess(populationRate.times{1}, ...
-  freqRange=options.freqRange, stepsize=options.stepsize, ...
-  convolutionPoints=options.convolutionPoints, ...
+  freqRange=options.freqRange, passbandFilter=options.passbandFilter, ...
+  stepsize=options.stepsize, convolutionPoints=options.convolutionPoints, ...
   showPhase=options.showPhase, smoothFreq=options.smoothFreq);
 
 % Instantaneous wide-band frequency

@@ -12,6 +12,9 @@ function [generalisedPhase, params] = generalisedPhaseForPointProcess(times, opt
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) vector array
 %     with frequency cutoff values for evaluating the wide-band phase of
 %     the signal (default=[2 12]).
+%   passbandFilter (logical, optional, keyword): a shape-(1, 1) logical
+%     scalar controlling whether to bandpass filter the signal within the
+%     freqRange (default=true).
 %   stepsize (numeric, optional, keyword): a shape-(1, 1) scalar
 %     representing the step size (in seconds) used for binning spikes to
 %     produce a continuous spiking rate trace (default=0.002).
@@ -23,7 +26,7 @@ function [generalisedPhase, params] = generalisedPhaseForPointProcess(times, opt
 %     (default=false). As part of displaying the pahse, the convolved
 %     spiking rate and the filtered spiking rate are also displayed.
 %   smoothFreq (logical, optional, keyword): a shape-(1, 1) logical scalar
-%     for smoothing instantaneous frequency estimates (default = false).
+%     for smoothing instantaneous frequency estimates (default=false).
 %
 % Returns:
 %   generalisedPhase (struct): a structure with the following fields:
@@ -72,6 +75,7 @@ function [generalisedPhase, params] = generalisedPhaseForPointProcess(times, opt
 arguments
   times {mustBeVector,mustBeNumeric}
   options.freqRange (1,2) {mustBeVector,mustBePositive} = [2 12]
+  options.passbandFilter (1,1) {islogical} = true
   options.stepsize (1,1) {mustBePositive} = 0.002
   options.convolutionPoints (1,1) {mustBeNumeric,mustBePositive} = 25
   options.showPhase (1,1) {islogical} = false
@@ -87,10 +91,15 @@ spikingRate = spikesPresentation./options.stepsize; % Turn into the spiking rate
 
 % Filter the population rate
 convolvedSR = round(1/(spikeTimeBins(2)-spikeTimeBins(1)));
-Wn_WB = [options.freqRange(1)/(convolvedSR/2) ...
-  options.freqRange(2)/(convolvedSR/2)]; % Band-pass frequencies normalised by the Nyquist frequency
-[bWB,aWB] = butter(3,Wn_WB); % Apply butterworth filter
-spikingRateFiltered = filtfilt(bWB,aWB,spikingRate)';
+if options.passbandFilter
+  Wn_WB = [options.freqRange(1)/(convolvedSR/2) ...
+    options.freqRange(2)/(convolvedSR/2)]; % Band-pass frequencies normalised by the Nyquist frequency
+  [bWB,aWB] = butter(3,Wn_WB); % Apply butterworth filter
+  spikingRateFiltered = filtfilt(bWB,aWB,spikingRate)';
+else
+  spikingRateFiltered = spikingRate(:);
+end
+spikingRateFiltered = spikingRateFiltered - mean(spikingRateFiltered);
 
 % Obtain wide-band oscillation/fluctuation phase
 [phase, instantFreq] = generalized_phase_vector(spikingRateFiltered, ...
@@ -119,11 +128,17 @@ if options.showPhase
   hold on
   yyaxis right
   plot(spikeTimeBins, spikingRate, 'c-')
-  plot(spikeTimeBins, spikingRateFiltered - mean(spikingRateFiltered) + mean(spikingRate), 'b-')
-  ylabel('Spiking rate (spikes/s)')
+  if options.passbandFilter
+    plot(spikeTimeBins, spikingRateFiltered - mean(spikingRateFiltered) + mean(spikingRate), 'b-')
+  end
+  ylabel('(Mean-subtracted) spiking rate (spikes/s)')
   
   title('Spiking Wide-band Phase Graph')
-  legend('Phase', 'Spiking Rate', 'Filtered spiking rate')
+  if options.passbandFilter
+    legend('Phase', 'Spiking Rate', 'Filtered spiking rate')
+  else
+    legend('Phase', 'Spiking Rate')
+  end
 end
 
 % Assign output
