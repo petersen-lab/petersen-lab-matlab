@@ -194,8 +194,10 @@ populationRatePhaseUnwrapped = unwrap(populationRatePhase);
 amplitude = abs(hilbert1);
 
 % Calculate instantaneous frequency
-instFreq = (convolvedSR)./diff(find(diff(populationRatePhase>0)==1)); % Find points where phase switches from negative to positive and use the distance between these points to calculate the instantaneous frequency
-instTime = cumsum(diff(find(diff(populationRatePhase>0)==1)))/convolvedSR; % Get corresponding times
+%cycleDurations = diff(find(diff(populationRatePhase>0)==1)); % Cycles endpoints at 0 rad crossings
+cycleDurations = diff(find(diff(ceil((populationRatePhase+pi)/(2*pi))))); % Cycle endpoints at pi (more appropriate)
+instFreq = (convolvedSR)./cycleDurations; % Find points where phase switches from negative to positive and use the distance between these points to calculate the instantaneous frequency
+instTime = cumsum(cycleDurations)/convolvedSR; % Get corresponding times
 instFreq(instFreq>options.range(2)) = nan; % Remove values outside the theta frequency range
 if options.smoothFrequencies
   instFreq = nanconv(instFreq,ce_gausswin(7)/sum(ce_gausswin(7)),'edge'); % Not sure why this is needed, makes it less instantaneous :)
