@@ -29,10 +29,10 @@ function savedFiles = saveGeneralisedPhase(populationRateFolderOrFile, options)
 %     for smoothing instantaneous frequency estimates (default = false).
 %
 % Returns:
-%   savedFiles (cell): a shape-(2, 1) cell array of filename character
+%   savedFiles (cell): a shape-(3, 1) cell array of filename character
 %     arrays. The first file contains instantenous wideband frequency
-%     info, while the second one contains instantaneous wideband phase
-%     info.
+%     info, the second one contains instantaneous wideband phase info,
+%     while the third one stores wideband oscillation/fluctuation amplitude.
 %
 % Dependencies:
 %   CellExplorer (https://cellexplorer.org/).
@@ -117,5 +117,24 @@ widebandInstantPhase.processingInfo.hostname = getenv('computername');
 filenamePhase = fullfile(file2find.folder, [basename '.widebandInstantPhase.timeseries.mat']);
 save(filenamePhase, 'widebandInstantPhase', '-v7.3');
 
+% Wide-band oscillation/fluctuation amplitude
+widebandAmplitude.data = generalisedPhase.amplitude';
+widebandAmplitude.timestamps = generalisedPhase.timestamps';
+widebandAmplitude.precision = class(generalisedPhase.amplitude);
+widebandAmplitude.units = 'a.u.';
+widebandAmplitude.nChannels = 1;
+widebandAmplitude.sr = round(1/(generalisedPhase.timestamps(2)-generalisedPhase.timestamps(1)));
+widebandAmplitude.nSamples = numel(generalisedPhase.timestamps);
+widebandAmplitude.description = ['A vector of wide-band oscillation/fluctuation amplitude. The number of samples ' ...
+                                    'corresponds to the number of samples in the convolved population firing rate. ' ...
+                                    'Wideband frequency range: ' num2str(options.freqRange(1)) ' to ' num2str(options.freqRange(2)) ' Hz.'];
+widebandAmplitude.processingInfo.params = parameters;
+widebandAmplitude.processingInfo.function = 'petersen-lab-matlab/waves/generalisedPhaseForPointProcess';
+widebandAmplitude.processingInfo.date = datetime;
+widebandAmplitude.processingInfo.username = getenv('username');
+widebandAmplitude.processingInfo.hostname = getenv('computername');
+filenameAmplitude = fullfile(file2find.folder, [basename '.widebandAmplitude.timeseries.mat']);
+save(filenameAmplitude, 'widebandAmplitude', '-v7.3');
+
 % Assign output
-savedFiles = {filenameFreq; filenamePhase};
+savedFiles = {filenameFreq; filenamePhase; filenameAmplitude};

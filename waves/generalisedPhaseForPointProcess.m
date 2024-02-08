@@ -41,6 +41,8 @@ function [generalisedPhase, params] = generalisedPhaseForPointProcess(times, opt
 %     instantFreq (numeric): a shape-(1, L) numeric array of wide-band
 %       oscillation/fluctuation instantenous frequencies estimated using
 %       generalized_phase_vector function.
+%     amplitude (numeric): a shape-(1, L) numeric array of amplitude
+%       (envelope) of the filtered and Hilbert-transformed spiking signal.
 %     spikingRate (numeric): a shape-(1, L) numeric array of convolved
 %       population spiking rate (in spikes/s; continuous).
 %     filteredSpikes (numeric): a shape-(1, L) numeric array of convolved
@@ -116,6 +118,9 @@ if options.smoothFreq
   instantFreqPerCycle = nanconv(instantFreqPerCycle,ce_gausswin(7)/sum(ce_gausswin(7)),'edge'); % Smooth it
 end
 
+% Obtain the amplitude of the Hilbert-transformed signal
+amplitude = abs(hilbert(spikingRateFiltered));
+
 % Display phase and spiking rate
 if options.showPhase
   % Phase
@@ -145,6 +150,7 @@ end
 generalisedPhase.phase = phase;
 generalisedPhase.phaseUnwrapped = phaseUnwrapped;
 generalisedPhase.instantFreq = instantFreq;
+generalisedPhase.amplitude = amplitude;
 generalisedPhase.spikingRate = spikingRate;
 generalisedPhase.filteredSpikes = spikingRateFiltered;
 generalisedPhase.timestamps = spikeTimeBins;
