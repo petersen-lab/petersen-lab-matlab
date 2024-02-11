@@ -66,21 +66,24 @@ function [figH, ax1, ax2, varargout] = adjacentFigs(figPath1, figPath2, options)
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
-  figPath1 {mustBeVector,mustBeText}
-  figPath2 {mustBeVector,mustBeText}
-  options.xlim1 {mustBeNumeric,mustBeNonnegative} = []
-  options.xlim2 {mustBeNumeric,mustBeNonnegative} = []
-  options.ylim1 {mustBeNumeric,mustBeNonnegative} = []
-  options.ylim2 {mustBeNumeric,mustBeNonnegative} = []
-  options.legendLocation1 {mustBeMember(options.legendLocation1,{'NorthEast','NorthWest','SouthEast','SouthWest','None'})} = 'None'
-  options.legendLocation2 {mustBeMember(options.legendLocation2,{'NorthEast','NorthWest','SouthEast','SouthWest','None'})} = 'None'
-  options.figPath3 {mustBeText} = ''
-  options.xlim3 {mustBeNumeric,mustBeNonnegative} = []
-  options.ylim3 {mustBeNumeric,mustBeNonnegative} = []
-  options.legendLocation3 {mustBeMember(options.legendLocation3,{'NorthEast','NorthWest','SouthEast','SouthWest','None'})} = 'None'
-  options.figSize {mustBeNumeric,mustBeNonnegative} = []
-  options.figPosition {mustBeNumeric,mustBeNonnegative} = []
-  options.tight {mustBeA(options.tight,'logical')} = false
+  figPath1 (1,:) {mustBeVector,mustBeText}
+  figPath2 (1,:) {mustBeVector,mustBeText}
+  options.xlim1 (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.xlim2 (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.ylim1 (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.ylim2 (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.legendLocation1 (1,:) {mustBeMember(options.legendLocation1,{'NorthEast','NorthWest','SouthEast','SouthWest','None'})} = 'None'
+  options.legendLocation2 (1,:) {mustBeMember(options.legendLocation2,{'NorthEast','NorthWest','SouthEast','SouthWest','None'})} = 'None'
+  options.colormap1 (1,:) {mustBeVector,mustBeText} = 'hsv'
+  options.colormap2 (1,:) {mustBeVector,mustBeText} = 'hsv'
+  options.figPath3 (1,:) {mustBeText} = ''
+  options.xlim3 (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.ylim3 (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.legendLocation3 (1,:) {mustBeMember(options.legendLocation3,{'NorthEast','NorthWest','SouthEast','SouthWest','None'})} = 'None'
+  options.colormap3 (1,:) {mustBeVector,mustBeText} = 'hsv'
+  options.figSize (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.figPosition (1,:) {mustBeNumeric,mustBeNonnegative} = []
+  options.tight (1,1) {mustBeA(options.tight,'logical')} = false
 end
 
 % Parse input
@@ -100,7 +103,11 @@ figPath1 = fullfile(figPath1(1).folder, figPath1(1).name);
 [figH, ax1] = fig2liveScript(figPath1, xlim=options.xlim1, ...
   ylim=options.ylim1, legendLocation=options.legendLocation1, ...
   figSize=options.figSize, tight=options.tight);
-set(ax1, 'Colormap',hsv);
+if strcmpi(options.colormap1,'hsv')
+  set(ax1, 'Colormap',hsv);
+elseif strcmpi(options.colormap1,'parula')
+  set(ax1, 'Colormap',parula);
+end
 
 % Draw figure 2
 figPath2 = dir(figPath2);
@@ -108,7 +115,11 @@ figPath2 = fullfile(figPath2(1).folder, figPath2(1).name);
 [~, ax2] = fig2liveScript(figPath2, xlim=options.xlim2, ...
   ylim=options.ylim2, legendLocation=options.legendLocation2, ...
   figSize=options.figSize, tight=options.tight);
-set(ax2, 'Colormap',hsv);
+if strcmpi(options.colormap2,'hsv')
+  set(ax2, 'Colormap',hsv);
+elseif strcmpi(options.colormap2,'parula')
+  set(ax2, 'Colormap',parula);
+end
 set(ax2, 'Parent',figH);
 
 % Draw figure 3
@@ -118,7 +129,11 @@ if ~isempty(options.figPath3)
   [~, ax3] = fig2liveScript(figPath3, xlim=options.xlim3, ...
   ylim=options.ylim3, legendLocation=options.legendLocation3, ...
   figSize=options.figSize, tight=options.tight);
-  set(ax3, 'Colormap',hsv);
+  if strcmpi(options.colormap3,'hsv')
+    set(ax3, 'Colormap',hsv);
+  elseif strcmpi(options.colormap3,'parula')
+    set(ax3, 'Colormap',parula);
+  end
   set(ax3, 'Parent',figH);
   varargout{1} = ax3;
 end

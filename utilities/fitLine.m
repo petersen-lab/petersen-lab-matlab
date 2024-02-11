@@ -50,8 +50,8 @@ function [yFit, slope, coefficients] = fitLine(x, y, options)
 %   Martynas Dervinis (martynas.dervinis@gmail.com).
 
 arguments
-  x (1,:) {mustBeVector}
-  y (1,:) {mustBeVector}
+  x (1,:) {mustBeVector,mustBeNonempty}
+  y (1,:) {mustBeVector,mustBeNonempty}
   options.type {mustBeMember(options.type,{'linear-linear','linear-circular-fma','linear-circular-pp'})} = 'linear-linear'
   options.corrCoef (1,1) {mustBeInRange(options.corrCoef,-1,1,'inclusive')} = 0
 end

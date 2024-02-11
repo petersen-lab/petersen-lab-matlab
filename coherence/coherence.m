@@ -502,7 +502,7 @@ else
 end
 
 % Interpolate coherence and phase values
-if ~isempty(options.freqGrid)
+if ~isempty(options.freqGrid) && ~isempty(fullCoherence.frequency)
   fullInterpCoherence.coherence = interp1(fullCoherence.frequency(1,:), ...
     fullCoherence.coherence', options.freqGrid, 'linear', 'extrap')';
   fullInterpCoherence.coherence(fullInterpCoherence.coherence < 0) = 0;
@@ -798,8 +798,10 @@ if options.fullCoherence
   if sum(signal) && sum(reference)
     [freq, coh, phi, coh_conf, phi_confU, phi_confL] = freqDependentWindowCoherence(reference', signal', options.samplingInterval, [], options);
     % Eliminate phase values with no defined confidence intervals
-    phi(isnan(phi_confU)) = NaN;
-    phi(isnan(phi_confL)) = NaN;
+    if ~isempty(freq)
+      phi(isnan(phi_confU)) = NaN;
+      phi(isnan(phi_confL)) = NaN;
+    end
   else
     freq = freqDependentWindowCoherence(reference', [], options.samplingInterval, [], options);
     coh = NaN(size(freq)); phi = NaN(size(freq)); coh_conf = NaN(size(freq)); phi_confU = NaN(size(freq)); phi_confL = NaN(size(freq));

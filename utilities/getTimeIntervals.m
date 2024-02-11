@@ -62,7 +62,7 @@ arguments
   dataFile (1,:) {mustBeA(dataFile,'char')}
   epochsOfInterest {mustBeCharOrListedType(epochsOfInterest,'cell')}
   options.thetaPower (1,:) {mustBeA(options.thetaPower,'char')} = '';
-  options.thetaAmplitude (1,:) {mustBeA(options.thetaAmplitude,'char')} = '';
+  options.thetaAmplitude (1,:) {mustBeMember(options.thetaAmplitude,{'','moderate','high','widebandModerate','widebandHigh'})} = '';
   options.minIntervalLength (1,1) {mustBeNumeric,mustBeNonnegative} = 0;
   options.onlyTrials (1,1) {mustBeA(options.onlyTrials,'logical')} = false
   options.onlyHighSpeed (1,1) {mustBeA(options.onlyHighSpeed,'logical')} = false
@@ -102,8 +102,13 @@ if strcmpi(options.thetaPower,'moderate') || strcmpi(options.thetaPower,'high')
     warning(['Theta power file ' thetaPowerFile ' does not exist.'])
   end
 end
-if strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high')
-  thetaAmplitudeFile = strrep(dataFile, '*', 'thetaAmplitude.timeseries');
+if strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high') ...
+    || strcmpi(options.thetaAmplitude,'widebandModerate') || strcmpi(options.thetaAmplitude,'widebandHigh')
+  if strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high')
+    thetaAmplitudeFile = strrep(dataFile, '*', 'thetaAmplitude.timeseries');
+  else
+    thetaAmplitudeFile = strrep(dataFile, '*', 'widebandAmplitude.timeseries');
+  end
   if exist(thetaAmplitudeFile,'file')
     load(thetaAmplitudeFile);
   else
@@ -169,16 +174,27 @@ for epoch = 1:numel(session.epochs)
     end
 
     % Select time intervals corresponding to increased theta amplitude
-    if (strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high')) && ~isempty(interval)
+    if (strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,'high') ...
+      || strcmpi(options.thetaAmplitude,'widebandModerate') || ...
+      strcmpi(options.thetaAmplitude,'widebandHigh')) && ~isempty(interval)
       if strcmpi(options.thetaAmplitude,'moderate')
         increasedThetaAmplitudeIntervals = thetaAmplitude.data >= mean(thetaAmplitude.data);
       elseif strcmpi(options.thetaAmplitude,'high')
         increasedThetaAmplitudeIntervals = thetaAmplitude.data >= prctile(thetaAmplitude.data,75);
+      elseif strcmpi(options.thetaAmplitude,'widebandModerate')
+        increasedThetaAmplitudeIntervals = widebandAmplitude.data >= mean(widebandAmplitude.data);
+      elseif strcmpi(options.thetaAmplitude,'widebandHigh')
+        increasedThetaAmplitudeIntervals = widebandAmplitude.data >= prctile(widebandAmplitude.data,75);
       end
       increasedThetaAmplitudeIntervals = logical2intervals(increasedThetaAmplitudeIntervals);
       increasedThetaAmplitudeIntervals(:,2) = increasedThetaAmplitudeIntervals(:,2) + 1;
-      increasedThetaAmplitudeIntervals(end,2) = min([increasedThetaAmplitudeIntervals(end,2) numel(thetaAmplitude.timestamps)]);
-      increasedThetaAmplitudeIntervals = thetaAmplitude.timestamps(increasedThetaAmplitudeIntervals);
+      try
+        increasedThetaAmplitudeIntervals(end,2) = min([increasedThetaAmplitudeIntervals(end,2) numel(thetaAmplitude.timestamps)]);
+        increasedThetaAmplitudeIntervals = thetaAmplitude.timestamps(increasedThetaAmplitudeIntervals);
+      catch
+        increasedThetaAmplitudeIntervals(end,2) = min([increasedThetaAmplitudeIntervals(end,2) numel(widebandAmplitude.timestamps)]);
+        increasedThetaAmplitudeIntervals = widebandAmplitude.timestamps(increasedThetaAmplitudeIntervals);
+      end
       interval = intervalOverlap(interval, increasedThetaAmplitudeIntervals);
     end
 
