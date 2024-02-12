@@ -212,7 +212,7 @@ for epoch = 1:numel(session.epochs)
     % Select time intervals corresponding to high speeds
     if options.onlyHighSpeed && ~isempty(interval)
       if exist('circular_track','var') && isfield(circular_track,'speed')
-        highSpeedIntervals = circular_track.speed >= 30; %circular_track.speed_th;
+        highSpeedIntervals = circular_track.speed >= 10; %circular_track.speed_th;
         highSpeedIntervals = logical2intervals(highSpeedIntervals);
         highSpeedIntervals(:,2) = highSpeedIntervals(:,2) + 1;
         highSpeedIntervals(end,2) = min([highSpeedIntervals(end,2) numel(circular_track.timestamps)]);

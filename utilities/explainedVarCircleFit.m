@@ -24,6 +24,6 @@ arguments
 end
 
 % Calculate the explained variance
-sse = sum((abs(x - xc) - R).^2 + (abs(y - yc) - R).^2);
-sst = sum((x - mean(x)).^2 + (y - mean(y)).^2);
-explainedVariance = 1 - sse/sst;
+sse = sum((vecnorm([x-xc y-yc]') - R).^2);
+sst = sum(vecnorm([x-mean(x) y-mean(y)]').^2);
+explainedVariance = max([0 1-sse/sst]);
