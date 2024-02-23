@@ -66,7 +66,7 @@ arguments
   options.minIntervalLength (1,1) {mustBeNumeric,mustBeNonnegative} = 0;
   options.onlyTrials (1,1) {mustBeA(options.onlyTrials,'logical')} = false
   options.onlyHighSpeed (1,1) {mustBeA(options.onlyHighSpeed,'logical')} = false
-  options.sleepState {mustBeMember(options.sleepState, {'wake','ma','nrem','rem',''})} = ''
+  options.sleepState {mustBeMember(options.sleepState, {'wake','ma','nrem','nrem1','nrem2','rem','rem1','rem2',''})} = ''
   options.excludeNoise (1,1) {mustBeA(options.excludeNoise,'logical')} = false;
 end
 
@@ -233,8 +233,44 @@ for epoch = 1:numel(session.epochs)
             interval = intervalOverlap(interval, SleepState.ints.MAstate);
           case 'nrem'
             interval = intervalOverlap(interval, SleepState.ints.NREMstate);
+          case 'nrem1'
+            if ismember(session.epochs{epoch}.behavioralParadigm, ...
+                {'ThetaMaze_AlternativeRunning','ThetaMaze_FreeRunning','LinearTrack_EndToEnd'})
+              return
+            else
+              interval = intervalOverlap(interval, SleepState.ints.NREMstate);
+            end
+          case 'nrem2'
+            if ismember(session.epochs{epoch}.behavioralParadigm, ...
+                {'ThetaMaze_AlternativeRunning','ThetaMaze_FreeRunning'})
+              interval = [];
+              sessionIntervals = [];
+            elseif epoch > 1 && isempty(sessionIntervals) && ...
+                ~strcmpi(session.epochs{epoch}.behavioralParadigm, 'LinearTrack_EndToEnd')
+              interval = intervalOverlap(interval, SleepState.ints.NREMstate);
+            else
+              interval = [];
+            end
           case 'rem'
             interval = intervalOverlap(interval, SleepState.ints.REMstate);
+          case 'rem1'
+            if ismember(session.epochs{epoch}.behavioralParadigm, ...
+                {'ThetaMaze_AlternativeRunning','ThetaMaze_FreeRunning','LinearTrack_EndToEnd'})
+              return
+            else
+              interval = intervalOverlap(interval, SleepState.ints.REMstate);
+            end
+          case 'rem2'
+            if ismember(session.epochs{epoch}.behavioralParadigm, ...
+                {'ThetaMaze_AlternativeRunning','ThetaMaze_FreeRunning'})
+              interval = [];
+              sessionIntervals = [];
+            elseif epoch > 1 && isempty(sessionIntervals) && ...
+                ~strcmpi(session.epochs{epoch}.behavioralParadigm, 'LinearTrack_EndToEnd')
+              interval = intervalOverlap(interval, SleepState.ints.REMstate);
+            else
+              interval = [];
+            end
           otherwise
             interval = [];
         end
