@@ -152,7 +152,7 @@ else
 end
 
 % Default theta range
-options.range = [4 12];
+options.range = [2 10]; %[4 12];
 
 % Spectrogram
 [spectrogram, t, f] = MTPointSpectrogram( ...
@@ -195,7 +195,7 @@ amplitude = abs(hilbert1);
 
 % Calculate instantaneous frequency
 %cycleDurations = diff(find(diff(populationRatePhase>0)==1)); % Cycles endpoints at 0 rad crossings
-cycleDurations = diff(find(diff(ceil((populationRatePhase+pi)/(2*pi))))); % Cycle endpoints at pi (more appropriate)
+cycleDurations = diff(find(diff(ceil((populationRatePhaseUnwrapped+pi)/(2*pi))))); % Cycle endpoints at pi (more appropriate)
 instFreq = (convolvedSR)./cycleDurations; % Find points where phase switches from negative to positive and use the distance between these points to calculate the instantaneous frequency
 instTime = cumsum(cycleDurations)/convolvedSR; % Get corresponding times
 instFreq(instFreq>options.range(2)) = nan; % Remove values outside the theta frequency range
