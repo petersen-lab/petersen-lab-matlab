@@ -152,7 +152,7 @@ else
 end
 
 % Default theta range
-options.range = [2 10]; %[4 12];
+options.range = [4 12];
 
 % Spectrogram
 [spectrogram, t, f] = MTPointSpectrogram( ...
