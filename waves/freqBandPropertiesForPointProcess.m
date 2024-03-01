@@ -1,18 +1,21 @@
-function [instTheta, params] = instThetaForPointProcess(times, options)
-% [instTheta, params] = instThetaForPointProcess(times, <options>)
+function [freqBandProperties, params] = freqBandPropertiesForPointProcess(times, freqRange, options)
+% [freqBandProperties, params] = freqBandPropertiesForPointProcess(times, freqRange, <options>)
 %
-% Calculates instantaneous theta (4-12 Hz) frequency band phase and power
-% for a given point process signal using multi-taper estimation and the
-% Chronux toolbox (http://chronux.org/).
+% Calculates various properties for a given frequency band including a
+% spectrogram, instantaneous phase, instantaneous frequency, oscillation
+% amplitude, and power for a given point process signal using multi-taper
+% estimation and the Chronux toolbox (http://chronux.org/).
 %
 % Args:
 %   times (numeric, required, positional): a shape-(M, N) numeric array
 %     where either M = 1 or N = 1. This input vector contains times when
 %     discrete events occur (i.e., spike times).
+%   freqRange (numeric, required, positional): a shape-(1, 2) numeric array
+%     defining the frequency band limits in Hz.
 %   sr (numeric, optional, keyword): a shape-(1, 1) scalar corresponding to
 %     the data sampling rate (in Hz) (default = 500Hz).
 %   window (numeric, optional, keyword): a shape-(1, 1) scalar representing
-%     duration (in s) of the spectrogram time window for theta power
+%     duration (in s) of the spectrogram time window for frequency band power
 %     calculation (default = 1).
 %   overlap (numeric, optional, keyword): a shape-(1, 1) scalar
 %     representing overlap (in s) between successive spectrogram windows
@@ -39,7 +42,7 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %   filterSpectrogram (logical, optional, keyword): a shape-(1, 1) logical
 %     scalar for carrying out spectrogram filtering (default = false).
 %   showPower (logical, optional, keyword): a shape-(1, 1) logical scalar
-%     for ploting the theta frequency band power (default = false). If
+%     for ploting the frequency band power (default = false). If
 %     'showSpectrogram' input parameter is set to true, power is overlayed
 %     the spectrogram and scaled to the figure window size having arbitrary
 %     units.
@@ -50,15 +53,15 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     representing points of gaussian convolution (gausswin) used to smooth
 %     binned spiking rate (default = 25 sample points).
 %   showPhase (logical, optional, keyword): a shape-(1, 1) logical scalar
-%     for ploting the theta oscillation phase (default = false). As part of
-%     displaying the pahse, the theta frequency power, the convolved
+%     for ploting the frequency band oscillation phase (default = false). As part of
+%     displaying the pahse, the frequency band power, the convolved
 %     spiking rate and the filtered spiking rate are also displayed.
 %   smoothFrequencies (logical, optional, keyword): a shape-(1, 1) logical
 %     scalar for smoothing instantaneous frequency estimates
 %     (default = false).
 %
 % Returns:
-%   instTheta (struct): a structure with the following fields:
+%   freqBandProperties (struct): a structure with the following fields:
 %     spectrogram (numeric): a shape-(M, N) numeric array containing the
 %       spectrogram. M corresponds to frequencies and N corresponds to
 %       time.
@@ -67,30 +70,31 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     spectrogramFrequencies (numeric): a shape-(M, 1) numeric array with
 %       spectrogram frequencies.
 %     spectrogramPower (numeric): a shape-(1, N) numeric array with power
-%       values of maximal theta frequencies at spectrogram timestamps.
+%       values of maximal frequencies at spectrogram timestamps.
 %     moderatePowerPeriods (logical): a shape-(1, N) logical array with
-%       true values representing points when theta power is moderate (above
-%       the mean power but below mean + norminv(0.95)*SD).
+%       true values representing points when frequency band power is
+%       moderate (above the mean power but below mean + norminv(0.95)*SD).
 %     highPowerPeriods (logical): a shape-(1, N) logical array with true
-%       values representing points when theta power is high (above
+%       values representing points when frequency band power is high (above
 %       mean + norminv(0.95)*SD).
 %     spectrogramMaxFrequency (numeric): a shape-(1, N) numeric array with
-%       maximal theta frequencies at spectrogram timestamps.
+%       maximal frequencies at spectrogram timestamps.
 %     instFrequency (numeric): a shape-(1, K) numeric array of
-%       instantaneous theta frequencies.
+%       instantaneous frequencies.
 %     instTimestamps (numeric): a shape-(1, K) numeric array of timestamps
-%       corresponding to instantaneous theta frequency estimates.
-%     instPhase (numeric): a shape-(1, L) numeric array of theta
+%       corresponding to instantaneous frequency estimates.
+%     instPhase (numeric): a shape-(1, L) numeric array of frequency band
 %       oscillation phases estimated using Hilbert transform. The number of
 %       samples is determined by the stepsize input parameter and
 %       correspond to the length of the convolved spiking rate vector.
 %     instPhaseUnwrapped (numeric): a shape-(1, L) numeric array of
-%       unwrapped theta oscillation phases estimated using Hilbert
+%       unwrapped frequency band oscillation phases estimated using Hilbert
 %       transform.
 %     amplitude (numeric): a shape-(1, L) numeric array of amplitude
 %       (envelope) of the filtered and Hilbert-transformed spiking signal.
 %     instPhaseTimestamps (numeric): a shape-(1, L) numeric array of
-%       timestamps corresponding to theta oscillation phase estimate array.
+%       timestamps corresponding to frequency band oscillation phase
+%       estimate array.
 %     spikingRate (numeric): a shape-(1, L) numeric array of convolved
 %       population spiking rate (in spikes/s; continuous).
 %     convolvedFilteredSpikes (numeric): a shape-(1, L) numeric array of
@@ -116,8 +120,10 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 %     Type 'help MTPointSpectrogram' for more info.
 %
 % Examples:
-%   instTheta = instThetaForPointProcess(populationRate.times{1}, pad=3);
-%   instTheta = instThetaForPointProcess(populationRate.times{1}, pad=3, ...
+%   freqBandProperties = freqBandPropertiesForPointProcess( ...
+%     populationRate.times{1}, freqRange=[1 4], pad=3);
+%   freqBandProperties = freqBandPropertiesForPointProcess( ...
+%     populationRate.times{1}, freqRange=[1 4], pad=3, ...
 %     showSpectrogram=true, showPower=true, showPhase=true);
 %
 % Author:
@@ -125,6 +131,7 @@ function [instTheta, params] = instThetaForPointProcess(times, options)
 
 arguments
   times {mustBeVector}
+  freqRange {mustBeVector,mustBePositive}
   options.sr (1,1) {mustBeNumeric} = 500
   options.window (1,1) {mustBeNumeric} = 1
   options.overlap (1,1) {mustBeNumeric} = 0.5
@@ -151,12 +158,9 @@ else
   options.show = 'off';
 end
 
-% Default theta range
-options.range = [4 12];
-
 % Spectrogram
 [spectrogram, t, f] = MTPointSpectrogram( ...
-  times, 'frequency',options.sr, 'range',options.range, ...
+  times, 'frequency',options.sr, 'range',freqRange, ...
   'window',options.window, 'overlap',options.overlap, 'step',options.step, ...
   'tapers',options.tapers, 'pad',options.pad, 'show',options.show, ...
   'parent',options.parent, 'cutoffs',options.cutoffs);
@@ -169,7 +173,7 @@ if options.filterSpectrogram
   %spectrogram = filter2(H,spectrogram); % Filter the spectrogram again: No longer applied
 end
 
-% Calculate power and theta frequency
+% Calculate power and frequency
 [power, maxIndex] = max(spectrogram);
 thetaFrequency = f(maxIndex);
 
@@ -181,11 +185,11 @@ spikingRate = spikesPresentation./options.stepsize; % Turn into the spiking rate
 
 % Filter the population rate
 convolvedSR = round(1/(spikeTimeBins(2)-spikeTimeBins(1)));
-Wn_theta = [options.range(1)/(convolvedSR/2) options.range(2)/(convolvedSR/2)]; % Band-pass frequencies normalised by the Nyquist frequency
+Wn_theta = [freqRange(1)/(convolvedSR/2) freqRange(2)/(convolvedSR/2)]; % Band-pass frequencies normalised by the Nyquist frequency
 [btheta,atheta] = butter(3,Wn_theta); % Apply butterworth filter
 spikingRateFiltered = filtfilt(btheta,atheta,spikingRate)';
 
-% Obtain theta oscillation phase
+% Obtain frequency band oscillation phase
 hilbert1 = hilbert(spikingRateFiltered); % Apply Hilbert transform
 populationRatePhase = atan2(imag(hilbert1), real(hilbert1));
 populationRatePhaseUnwrapped = unwrap(populationRatePhase);
@@ -198,12 +202,12 @@ amplitude = abs(hilbert1);
 cycleDurations = diff(find(diff(ceil((populationRatePhaseUnwrapped+pi)/(2*pi))))); % Cycle endpoints at pi (more appropriate)
 instFreq = (convolvedSR)./cycleDurations; % Find points where phase switches from negative to positive and use the distance between these points to calculate the instantaneous frequency
 instTime = cumsum(cycleDurations)/convolvedSR; % Get corresponding times
-instFreq(instFreq>options.range(2)) = nan; % Remove values outside the theta frequency range
+instFreq(instFreq>freqRange(2)) = nan; % Remove values outside the frequency band limits
 if options.smoothFrequencies
   instFreq = nanconv(instFreq,ce_gausswin(7)/sum(ce_gausswin(7)),'edge'); % Not sure why this is needed, makes it less instantaneous :)
 end
 
-% Find periods with moderate and high theta frequency band power
+% Find periods with moderate and high frequency band power
 meanPower = mean(power);
 stdPower = std(power);
 highPowerThr = meanPower + norminv(0.95)*stdPower;
@@ -230,7 +234,7 @@ if options.showPhase
   figure
   yyaxis left
   plot(spikeTimeBins, populationRatePhase, '-', 'color','#4DBEEE')
-  ylabel('Theta oscillation phase (rad)')
+  ylabel('Oscillation phase (rad)')
   
   % Spiking rate
   hold on
@@ -256,25 +260,26 @@ if options.showPhase
   end
   ylabel('Convolved spiking rate (spikes/s)')
   
-  title('Spiking Theta Power and Phase Graph')
-  legend('Phase', 'Spiking Rate', 'Filtered spiking rate', 'Low theta power', 'Moderate theta power', 'High theta power')
+  title('Oscillation Power and Phase Graph')
+  legend('Phase', 'Spiking Rate', 'Filtered spiking rate', 'Low power periods', 'Moderate power periods', 'High power periods')
 end
 
 
 % Assign output
-instTheta.spectrogram = spectrogram;
-instTheta.spectrogramTimestamps = t';
-instTheta.spectrogramFrequencies = f;
-instTheta.spectrogramPower = power;
-instTheta.moderatePowerPeriods = logical(moderatePowerPeriods);
-instTheta.highPowerPeriods = logical(highPowerPeriods);
-instTheta.spectrogramMaxFrequency = thetaFrequency';
-instTheta.instFrequency = instFreq';
-instTheta.instTimestamps = instTime';
-instTheta.instPhase = populationRatePhase';
-instTheta.instPhaseUnwrapped = populationRatePhaseUnwrapped';
-instTheta.amplitude = amplitude';
-instTheta.instPhaseTimestamps = spikeTimeBins;
-instTheta.spikingRate = spikingRate;
-instTheta.spikingRateFiltered = spikingRateFiltered';
+freqBandProperties.spectrogram = spectrogram;
+freqBandProperties.spectrogramTimestamps = t';
+freqBandProperties.spectrogramFrequencies = f;
+freqBandProperties.spectrogramPower = power;
+freqBandProperties.moderatePowerPeriods = logical(moderatePowerPeriods);
+freqBandProperties.highPowerPeriods = logical(highPowerPeriods);
+freqBandProperties.spectrogramMaxFrequency = thetaFrequency';
+freqBandProperties.instFrequency = instFreq';
+freqBandProperties.instTimestamps = instTime';
+freqBandProperties.instPhase = populationRatePhase';
+freqBandProperties.instPhaseUnwrapped = populationRatePhaseUnwrapped';
+freqBandProperties.amplitude = amplitude';
+freqBandProperties.instPhaseTimestamps = spikeTimeBins;
+freqBandProperties.spikingRate = spikingRate;
+freqBandProperties.spikingRateFiltered = spikingRateFiltered';
 params = rmfield(options,'show');
+params.freqRange = freqRange;
