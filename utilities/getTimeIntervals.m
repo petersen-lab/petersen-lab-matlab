@@ -25,6 +25,12 @@ function sessionIntervals = getTimeIntervals(dataFile, epochsOfInterest, options
 %     'moderate' - intervals with above-average theta amplitude only.
 %     'high' - intervals with the theta amplitude above 75th percentile.
 %     '' - no restrictions on theta amplitude range (default).
+%   theta2deltaRatio (char, optional, keyword): a shape-(1, J) character
+%     array controlling whether to limit intervals to high/low theta/delta
+%     power band ratio periods. The following options are available:
+%     'high' - limit intervals to >1 theta/delta power band ratio periods.
+%     'low' - limit intervals to <1 theta/delta power band ratio periods.
+%     '' - no interval restrictions.
 %   minIntervalLength (numeric, optional, keyword): a shape-(1, 1) numeric
 %     scalar defining the minimal interval duration (default=0). Smaller
 %     intervals will be excluded.
@@ -63,6 +69,7 @@ arguments
   epochsOfInterest {mustBeCharOrListedType(epochsOfInterest,'cell')}
   options.thetaPower (1,:) {mustBeA(options.thetaPower,'char')} = '';
   options.thetaAmplitude (1,:) {mustBeMember(options.thetaAmplitude,{'','moderate','high','widebandModerate','widebandHigh'})} = '';
+  options.theta2deltaRatio (1,:) {mustBeMember(options.theta2deltaRatio,{'','high','low'})} = '';
   options.minIntervalLength (1,1) {mustBeNumeric,mustBeNonnegative} = 0;
   options.onlyTrials (1,1) {mustBeA(options.onlyTrials,'logical')} = false
   options.onlyHighSpeed (1,1) {mustBeA(options.onlyHighSpeed,'logical')} = false
@@ -114,6 +121,15 @@ if strcmpi(options.thetaAmplitude,'moderate') || strcmpi(options.thetaAmplitude,
   else
     options.thetaAmplitudeFile = '';
     warning(['Theta amplitude file ' thetaAmplitudeFile ' does not exist.'])
+  end
+end
+if strcmpi(options.theta2deltaRatio,'low') || strcmpi(options.theta2deltaRatio,'high')
+  theta2deltaPowerRatioFile = strrep(dataFile, '*', 'theta2deltaPowerRatio.timeseries');
+  if exist(theta2deltaPowerRatioFile,'file')
+    load(theta2deltaPowerRatioFile);
+  else
+    options.theta2deltaRatio = '';
+    warning(['Theta-to-delta power ratio file ' theta2deltaPowerRatioFile ' does not exist.'])
   end
 end
 if options.onlyTrials || options.onlyHighSpeed
@@ -196,6 +212,16 @@ for epoch = 1:numel(session.epochs)
         increasedThetaAmplitudeIntervals = widebandAmplitude.timestamps(increasedThetaAmplitudeIntervals);
       end
       interval = intervalOverlap(interval, increasedThetaAmplitudeIntervals);
+    end
+
+    % Select time intervals corresponding to low or high theta/delta frequency band power ratio
+    if (strcmpi(options.theta2deltaRatio,'low') || strcmpi(options.theta2deltaRatio,'high')) && ~isempty(interval)
+      if strcmpi(options.theta2deltaRatio,'low')
+        theta2deltaPeriods = powerRatioTimeseries.timestamps(logical2intervals(powerRatioTimeseries.data < 1));
+      elseif strcmpi(options.theta2deltaRatio,'high')
+        theta2deltaPeriods = powerRatioTimeseries.timestamps(logical2intervals(powerRatioTimeseries.data > 1));
+      end
+      interval = intervalOverlap(interval, theta2deltaPeriods);
     end
 
     % Select time intervals corresponding to trials only

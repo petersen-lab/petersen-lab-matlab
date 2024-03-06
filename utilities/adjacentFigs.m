@@ -26,6 +26,12 @@ function [figH, ax1, ax2, varargout] = adjacentFigs(figPath1, figPath2, options)
 %     array defining legend position for the figure 2. It could take one of
 %     the following values: 'NorthEast', 'NorthWest', 'SouthEast',
 %     'SouthWest', or 'None' (no legend; default).
+%   colormap1 (char, optional, keyword): a shape-(1,H) character array
+%     controlling the choice of the first figure's colormap. Only two
+%     options are currently available: 'hsv' (default) and 'parula'.
+%   colormap2 (char, optional, keyword): a shape-(1,F) character array
+%     controlling the choice of the second figure's colormap. Only two
+%     options are currently available: 'hsv' (default) and 'parula'.
 %   figPath3 (char, optional, keyword): a shape-(1,J) character array
 %     containing the full figure file path (supports wildcards;
 %     default = []).
@@ -37,6 +43,9 @@ function [figH, ax1, ax2, varargout] = adjacentFigs(figPath1, figPath2, options)
 %     array defining legend position for the figure 3. It could take one of
 %     the following values: 'NorthEast', 'NorthWest', 'SouthEast',
 %     'SouthWest', or 'None' (no legend; default).
+%   colormap3 (char, optional, keyword): a shape-(1,G) character array
+%     controlling the choice of the third figure's colormap. Only two
+%     options are currently available: 'hsv' (default) and 'parula'.
 %   figSize (numeric, optional, keyword): a shape-(1,1) or shape-(1,2)
 %     numeric array defining the wdth and the height of the figure. If a
 %     scalar is supplied, it acts both as height and width (default = []).
