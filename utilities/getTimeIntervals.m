@@ -217,9 +217,9 @@ for epoch = 1:numel(session.epochs)
     % Select time intervals corresponding to low or high theta/delta frequency band power ratio
     if (strcmpi(options.theta2deltaRatio,'low') || strcmpi(options.theta2deltaRatio,'high')) && ~isempty(interval)
       if strcmpi(options.theta2deltaRatio,'low')
-        theta2deltaPeriods = powerRatioTimeseries.timestamps(logical2intervals(powerRatioTimeseries.data < 1));
+        theta2deltaPeriods = powerRatioTimeseries.timestamps(logical2intervals(powerRatioTimeseries.data < 3));
       elseif strcmpi(options.theta2deltaRatio,'high')
-        theta2deltaPeriods = powerRatioTimeseries.timestamps(logical2intervals(powerRatioTimeseries.data > 1));
+        theta2deltaPeriods = powerRatioTimeseries.timestamps(logical2intervals(powerRatioTimeseries.data > 3));
       end
       interval = intervalOverlap(interval, theta2deltaPeriods);
     end
