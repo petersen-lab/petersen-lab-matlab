@@ -14,6 +14,8 @@ function [oscScore, oscFreq, oscScoreHist, shuffledOscScore, ...
 %   freqRange (numeric, optional, keyword): a shape-(1, 2) numeric array
 %     defining frequency range over which to calculate the oscillation
 %     score (default=[4 12]);
+%   sampleRate(numeric, optional, keyword): a shape-(1, 1) numeric scalar
+%     frequency of sampling rate from the raw data (default=30000).
 %   sr (numeric, optional, keyword): a shape-(1, 1) numeric scalar
 %     frequency for sampling the signal in Hz (default=500).
 %   shuffle (logical | struct, optional, keyword): a shape-(1, 1) logical
@@ -25,6 +27,8 @@ function [oscScore, oscFreq, oscScoreHist, shuffledOscScore, ...
 %     have fields 'Type' and 'Seed' which specify the type of the random
 %     number generator and the numeric seed. For more information, check
 %     the documentation of the Matlab's rng function.
+%   nShuffles (numeric, optional, keyword): Number of shuffles to perform
+%     for significance testing (default=10).
 %
 % Returns:
 %   oscScore (numeric): a shape-(M, 1) numeric array of ocillation scores
@@ -47,14 +51,7 @@ function [oscScore, oscFreq, oscScoreHist, shuffledOscScore, ...
 %     oscillation scores above this value are considered to be oscillatory
 %     within the defined freqRange.
 %   options (struct): a shape-(1, 1) scalar structure containing parameter
-%     values used in the oscillation score calculations. The structure
-%     fields correspond to the optional input variables: 'freqRange', 'sr',
-%     and 'shuffle'. If data shuffling was used to estimate the
-%     significance threshold, 'shuffle' field will hold information
-%     desribing the type and the seed of the random number generator (type
-%     'doc rng' for more info) used in the data shuffling procedure. You
-%     have to use the same random number generator parameters if you want
-%     to reproduce the same results.
+%     values used in the oscillation score calculations.
 %
 % Comments:
 %   The shuffling procedure is done by pooling spike times from all entries
@@ -72,17 +69,20 @@ function [oscScore, oscFreq, oscScoreHist, shuffledOscScore, ...
 %
 % Authors:
 %   Martynas Dervinis (martynas.dervinis@gmail.com)
+%   Mingze Dou
 
 arguments
-  spikeTimes (:,:) {mustBeNumericOrListedType(spikeTimes,'cell')}
-  options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 12]
-  options.sr (1,1) {mustBePositive} = 500
-  options.shuffle (1,1) {mustBeLogicalOrListedType(options.shuffle,'struct')} = false;
+    spikeTimes (:,:) {mustBeNumericOrListedType(spikeTimes,'cell')}
+    options.freqRange (1,2) {mustBePositive,mustBeVector} = [4 12]
+    options.sampleRate (1,1) {mustBeInteger,mustBePositive} = 30000 % Sample rate of the data in Hz
+    options.sr (1,1) {mustBePositive} = 500 % Sample rate of the autocorrelogram
+    options.shuffle (1,1) {mustBeLogicalOrListedType(options.shuffle,'struct')} = false
+    options.nShuffles (1,1) {mustBePositive,mustBeInteger} = 10
 end
 
 % Parse input
 if ~iscell(spikeTimes)
-  spikeTimes = {spikeTimes};
+    spikeTimes = {spikeTimes};
 end
 
 % Calculate oscillation score
@@ -90,54 +90,75 @@ nEntries = numel(spikeTimes);
 oscScore = zeros(nEntries,1);
 oscFreq = zeros(nEntries,1);
 for entry = 1:nEntries
-  if isempty(spikeTimes{entry})
-    oscScore(entry) = 0;
-  else
-    [oscScore(entry), ~, oscFreq(entry)] = OScoreSpikes( ...
-      {round(spikeTimes{entry}*options.sr)}, ...
-      round(spikeTimes{entry}(end)*options.sr), ...
-      options.freqRange(1)+1, options.freqRange(2), options.sr);
-  end
+    if isempty(spikeTimes{entry})
+        oscScore(entry) = 0;
+    else
+        [oscScore(entry), ~, oscFreq(entry)] = OScoreSpikes( ...
+            {round(spikeTimes{entry}*options.sampleRate)}, ... % Use sampleRate here
+            round(spikeTimes{entry}(end)*options.sampleRate), ... % And here
+            options.freqRange(1), options.freqRange(2), options.sr);
+    end
 end
 
 % Bin oscillation scores into a histogram
 if nEntries > 1
-  [oscScoreHist, scoreBins] = hist(oscScore(logical(oscScore)), round(max(oscScore))+1); %#ok<*HIST>
-  oscScoreHist = [scoreBins; oscScoreHist];
+    [oscScoreHist, scoreBins] = hist(oscScore(logical(oscScore)), round(max(oscScore))+1); %#ok<*HIST>
+    oscScoreHist = [scoreBins; oscScoreHist];
 else
-  oscScoreHist = [];
+    oscScoreHist = [];
 end
 
-% Establish significance cutoff
+% Initialize shuffled results
+shuffledOscScore = [];
+shuffledOscScoreHist = [];
+significanceCutoff = [];
+
+% Establish significance cutoff if shuffling is requested
 if (isstruct(options.shuffle) || options.shuffle) && nEntries > 1
-  % Initialise the random number generator
-  if isstruct(options.shuffle)
-    rng(options.shuffle.Seed, options.shuffle.Type);
-    options.rngParams = options.shuffle;
-  else
-    rng('shuffle');
-    options.rngParams = rng;
-    options.rngParams = rmfield(options.rngParams, 'State');
-  end
-  % Calculate shuffled oscillation scores
-  randSpikeTimes = shuffleSpikeTimes(spikeTimes, customRNG=options.rngParams);
-  shuffledOscScore = zeros(nEntries,1);
-  for entry = 1:nEntries
-    if isempty(randSpikeTimes{entry})
-      shuffledOscScore(entry) = 0;
+    % Initialize the random number generator
+    if isstruct(options.shuffle)
+        rng(options.shuffle.Seed, options.shuffle.Type);
+        options.rngParams = options.shuffle;
     else
-      shuffledOscScore(entry) = OScoreSpikes( ...
-        {round(randSpikeTimes{entry}*options.sr)}, ...
-        round(randSpikeTimes{entry}(end)*options.sr), ...
-        options.freqRange(1), options.freqRange(2), options.sr);
+        rng('shuffle');
+        options.rngParams = rng;
+        options.rngParams = rmfield(options.rngParams, 'State');
     end
-  end
-  % Bin shuffled oscillation scores into a histogram
-  [shuffledOscScoreHist, scoreBins] = hist( ...
-    shuffledOscScore(logical(shuffledOscScore)), round(max(shuffledOscScore))+1);
-  shuffledOscScoreHist = [scoreBins; shuffledOscScoreHist];
-  % Calculate significance cutoff
-  significanceCutoff = prctile(shuffledOscScore(logical(shuffledOscScore)),95);
-else
-  shuffledOscScore = []; shuffledOscScoreHist = []; significanceCutoff = [];
+    
+    % Perform multiple shuffles
+    allShuffledScores = zeros(nEntries * options.nShuffles, 1);
+    
+    for iShuffle = 1:options.nShuffles
+        % Calculate shuffled oscillation scores for this iteration
+        randSpikeTimes = shuffleSpikeTimes(spikeTimes, customRNG=options.rngParams);
+        shuffledScoresThisIter = zeros(nEntries, 1);
+        
+        for entry = 1:nEntries
+            if ~isempty(randSpikeTimes{entry})
+                shuffledScoresThisIter(entry) = OScoreSpikes( ...
+                    {round(randSpikeTimes{entry}*options.sampleRate)}, ... % Use sampleRate here
+                    round(randSpikeTimes{entry}(end)*options.sampleRate), ... % And here
+                    options.freqRange(1), options.freqRange(2), options.sr);
+            end
+        end
+        
+        % Store scores from this iteration
+        startIdx = (iShuffle-1)*nEntries + 1;
+        endIdx = iShuffle*nEntries;
+        allShuffledScores(startIdx:endIdx) = shuffledScoresThisIter;
+    end
+    
+    % Calculate significance cutoff from all shuffled scores
+    validShuffledScores = allShuffledScores(allShuffledScores > 0);
+    if ~isempty(validShuffledScores)
+        significanceCutoff = prctile(validShuffledScores, 95);
+        
+        % Store the last shuffle's scores for the histogram
+        shuffledOscScore = allShuffledScores((end-nEntries+1):end);
+        
+        % Create histogram from all shuffled scores
+        [shuffledHist, scoreBins] = hist(validShuffledScores, round(max(validShuffledScores))+1);
+        shuffledOscScoreHist = [scoreBins; shuffledHist];
+    end
+end
 end
